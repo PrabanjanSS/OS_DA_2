@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI Grading System{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#0D9488',
+                        secondary: '#F97316',
+                        dark: '#0F172A',
+                        light: '#F0FDFA',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            min-height: 100vh;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(13, 148, 136, 0.3);
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #F97316 0%, #FB923C 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(249, 115, 22, 0.3);
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <nav class="bg-dark/90 backdrop-blur-md shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-white flex items-center gap-2">
+                        <span class="text-primary">🎓</span> AI Grader
+                    </a>
+                </div>
+                <div class="flex items-center gap-4">
+                    {% if current_user.is_authenticated %}
+                        <span class="text-gray-300">Hello, {{ current_user.name }}</span>
+                        {% if current_user.role == 'teacher' %}
+                            <a href="{{ url_for('teacher.dashboard') }}" class="text-gray-300 hover:text-white transition">Dashboard</a>
+                        {% else %}
+                            <a href="{{ url_for('student.dashboard') }}" class="text-gray-300 hover:text-white transition">Dashboard</a>
+                        {% endif %}
+                        <a href="{{ url_for('auth.logout') }}" class="text-secondary hover:text-orange-400 transition">Logout</a>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="text-gray-300 hover:text-white transition">Login</a>
+                        <a href="{{ url_for('auth.signup') }}" class="btn-primary text-white px-4 py-2 rounded-lg">Sign Up</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-4 rounded-lg {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'error' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-dark/90 text-gray-400 py-6 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p>&copy; 2024 AI Grading System. Built with Flask, Python & OS Concepts.</p>
+        </div>
+    </footer>
+</body>
+</html>

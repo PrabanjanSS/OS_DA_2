@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold text-white mb-2">Student Dashboard</h1>
+    <p class="text-gray-400">View your assigned question sets and submit answers</p>
+</div>
+
+<div class="flex justify-between items-center mb-6">
+    <h2 class="text-xl font-semibold text-white">Assigned Question Sets</h2>
+    <a href="{{ url_for('student.history') }}" class="text-primary hover:underline">
+        View History →
+    </a>
+</div>
+
+{% if accessible_sets %}
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for item in accessible_sets %}
+            <div class="card rounded-xl p-6 shadow-lg hover:shadow-xl transition">
+                <h3 class="text-xl font-bold text-dark mb-2">{{ item.set.title }}</h3>
+                <p class="text-gray-600 text-sm mb-4">{{ item.set.description or 'No description' }}</p>
+                <div class="flex gap-4 text-sm text-gray-500 mb-4">
+                    <span>📝 {{ item.set.questions|length }} questions</span>
+                    <span>📚 {{ item.set.materials|length }} materials</span>
+                </div>
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-sm text-gray-600">
+                        Attempts: {{ item.attempts_used }}/{{ item.max_attempts }}
+                    </span>
+                    <span class="text-sm font-semibold {{ 'text-green-600' if item.remaining > 0 else 'text-red-600' }}">
+                        {{ item.remaining }} remaining
+                    </span>
+                </div>
+                {% if item.remaining > 0 %}
+                    <a href="{{ url_for('student.view_set', set_id=item.set.id) }}" 
+                        class="btn-primary text-white px-4 py-2 rounded-lg text-sm block text-center">
+                        Start Attempt
+                    </a>
+                {% else %}
+                    <button disabled class="w-full bg-gray-300 text-gray-500 py-2 rounded-lg text-sm cursor-not-allowed">
+                        No Attempts Left
+                    </button>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card rounded-xl p-12 text-center">
+        <div class="text-5xl mb-4">📭</div>
+        <h3 class="text-xl font-semibold text-dark mb-2">No Assigned Sets</h3>
+        <p class="text-gray-600">Wait for your teacher to grant you access to question sets</p>
+    </div>
+{% endif %}
+{% endblock %}
