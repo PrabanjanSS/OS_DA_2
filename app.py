@@ -1,10 +1,24 @@
 import os
 from flask import Flask, render_template
+from sqlalchemy import inspect, text
 from config import Config
 from extensions import db, login_manager
 from auth.routes import auth_bp
 from teacher.routes import teacher_bp
 from student.routes import student_bp
+
+
+def ensure_schema():
+    """Add newly introduced columns to an existing SQLite database."""
+    inspector = inspect(db.engine)
+    if 'logs' not in inspector.get_table_names():
+        return
+    columns = {col['name'] for col in inspector.get_columns('logs')}
+    with db.engine.begin() as conn:
+        if 'manually_graded' not in columns:
+            conn.execute(text('ALTER TABLE logs ADD COLUMN manually_graded BOOLEAN DEFAULT 0'))
+        if 'teacher_comment' not in columns:
+            conn.execute(text('ALTER TABLE logs ADD COLUMN teacher_comment TEXT'))
 
 def create_app():
     app = Flask(__name__)
@@ -25,6 +39,7 @@ def create_app():
     # Create database tables
     with app.app_context():
         db.create_all()
+        ensure_schema()
     
     # Root route
     @app.route('/')

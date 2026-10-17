@@ -86,4 +86,6 @@ class Log(db.Model):
     max_score = db.Column(db.Integer, default=10)
     source_used = db.Column(db.String(50))  # 'material_match', 'ai_api', 'fallback_dataset'
     confidence = db.Column(db.Float)
+    manually_graded = db.Column(db.Boolean, default=False)  # True when a teacher overrides the AI score
+    teacher_comment = db.Column(db.Text)  # Teacher's optional note on manual correction
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)

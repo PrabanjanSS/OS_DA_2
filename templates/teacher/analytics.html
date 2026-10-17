@@ -51,35 +51,78 @@
     <h3 class="text-xl font-bold text-dark mb-4">Submission Details</h3>
     
     {% if logs %}
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr class="border-b">
-                        <th class="text-left py-3 px-4 text-gray-600">Student</th>
-                        <th class="text-left py-3 px-4 text-gray-600">Question</th>
-                        <th class="text-left py-3 px-4 text-gray-600">Score</th>
-                        <th class="text-left py-3 px-4 text-gray-600">Source</th>
-                        <th class="text-left py-3 px-4 text-gray-600">Confidence</th>
-                        <th class="text-left py-3 px-4 text-gray-600">Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log, user in logs %}
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="py-3 px-4">{{ user.name }}</td>
-                            <td class="py-3 px-4 max-w-xs truncate">{{ log.question.question_text }}</td>
-                            <td class="py-3 px-4">
-                                <span class="font-bold {{ 'text-green-600' if log.score >= 6 else 'text-red-600' }}">
-                                    {{ "%.1f"|format(log.score) }}/{{ log.max_score }}
-                                </span>
-                            </td>
-                            <td class="py-3 px-4 text-sm capitalize">{{ log.source_used|replace('_', ' ') }}</td>
-                            <td class="py-3 px-4 text-sm">{{ "%.2f"|format(log.confidence) }}</td>
-                            <td class="py-3 px-4 text-sm text-gray-500">{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="space-y-6">
+            {% for log, user in logs %}
+                <div class="border border-gray-200 rounded-xl p-5">
+                    <!-- Header: student + score -->
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h4 class="text-lg font-bold text-dark">👤 {{ user.name }}</h4>
+                            <p class="text-sm text-gray-500">{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold {{ 'text-green-600' if log.score >= (log.max_score * 0.6) else 'text-red-600' }}">
+                                {{ "%.1f"|format(log.score) }}/{{ log.max_score }}
+                            </div>
+                            {% if log.manually_graded %}
+                                <span class="inline-block mt-1 text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">✍️ Manually graded</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Question -->
+                    <p class="text-gray-800 font-medium mb-3">{{ log.question.question_text }}</p>
+
+                    <!-- Student answer -->
+                    <div class="bg-gray-50 rounded-lg p-4 mb-3">
+                        <p class="text-sm text-gray-600 mb-1">Student's Answer:</p>
+                        <p class="text-gray-800 whitespace-pre-wrap">{{ log.answer }}</p>
+                    </div>
+
+                    <!-- AI feedback -->
+                    {% if log.ai_response %}
+                        <div class="bg-blue-50 rounded-lg p-4 mb-3">
+                            <p class="text-sm text-blue-600 font-medium mb-1">AI Feedback:</p>
+                            <p class="text-blue-800">{{ log.ai_response }}</p>
+                        </div>
+                    {% endif %}
+
+                    <div class="flex flex-wrap items-center gap-4 text-sm mb-4">
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full capitalize">{{ log.source_used|replace('_', ' ') }}</span>
+                        <span class="text-gray-500">Confidence: {{ "%.2f"|format(log.confidence) }}</span>
+                    </div>
+
+                    {% if log.teacher_comment %}
+                        <div class="bg-purple-50 rounded-lg p-4 mb-4">
+                            <p class="text-sm text-purple-600 font-medium mb-1">Teacher's Note:</p>
+                            <p class="text-purple-800">{{ log.teacher_comment }}</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Manual correction -->
+                    <form method="POST" action="{{ url_for('teacher.manual_correct', log_id=log.id) }}"
+                          class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <p class="text-sm font-semibold text-yellow-800 mb-3">✍️ Manual Correction</p>
+                        <div class="flex flex-col md:flex-row md:items-end gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">Corrected Score (0 - {{ log.max_score }})</label>
+                                <input type="number" name="score" step="0.5" min="0" max="{{ log.max_score }}"
+                                    value="{{ log.score }}" required
+                                    class="w-full md:w-32 px-3 py-2 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition">
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-xs text-gray-600 mb-1">Comment (optional)</label>
+                                <input type="text" name="teacher_comment" placeholder="Reason for the change..."
+                                    value="{{ log.teacher_comment or '' }}"
+                                    class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition">
+                            </div>
+                            <button type="submit" class="btn-secondary text-white px-5 py-2 rounded-lg whitespace-nowrap">
+                                Save Correction
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            {% endfor %}
         </div>
     {% else %}
         <p class="text-gray-500 text-center py-4">No submissions yet</p>

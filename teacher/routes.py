@@ -199,3 +199,38 @@ def set_analytics(set_id):
     return render_template('teacher/analytics.html', set=set_obj, logs=logs, 
                           total_submissions=total_submissions, avg_score=avg_score,
                           source_counts=source_counts)
+
+
+@teacher_bp.route('/log/<int:log_id>/correct', methods=['POST'])
+@login_required
+def manual_correct(log_id):
+    if current_user.role != 'teacher':
+        flash('Access denied.', 'error')
+        return redirect(url_for('auth.login'))
+
+    log = Log.query.get_or_404(log_id)
+    question = Question.query.get(log.question_id)
+    set_obj = Set.query.get(question.set_id)
+    if set_obj.teacher_id != current_user.id:
+        flash('Access denied.', 'error')
+        return redirect(url_for('teacher.dashboard'))
+
+    try:
+        score = float(request.form.get('score'))
+    except (TypeError, ValueError):
+        flash('Please enter a valid numeric score.', 'error')
+        return redirect(url_for('teacher.set_analytics', set_id=set_obj.id))
+
+    # Keep the corrected score within the valid range
+    max_score = log.max_score or 10
+    score = max(0.0, min(score, max_score))
+
+    log.score = score
+    log.manually_graded = True
+    comment = (request.form.get('teacher_comment') or '').strip()
+    if comment:
+        log.teacher_comment = comment
+    db.session.commit()
+
+    flash(f'Score corrected to {score:g}/{max_score} for {log.student.name}.', 'success')
+    return redirect(url_for('teacher.set_analytics', set_id=set_obj.id))
