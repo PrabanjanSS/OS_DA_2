@@ -59,6 +59,42 @@ def view_set(set_id):
                           questions=questions, access_grants=access_grants,
                           strictness_labels={level: data[0] for level, data in STRICTNESS_LEVELS.items()})
 
+@teacher_bp.route('/set/<int:set_id>/delete', methods=['POST'])
+@login_required
+def delete_set(set_id):
+    if current_user.role != 'teacher':
+        flash('Access denied.', 'error')
+        return redirect(url_for('auth.login'))
+
+    set_obj = Set.query.get_or_404(set_id)
+    if set_obj.teacher_id != current_user.id:
+        flash('Access denied.', 'error')
+        return redirect(url_for('teacher.dashboard'))
+
+    title = set_obj.title
+
+    # Submissions point at questions, so clear them before the questions cascade away
+    submissions = db.session.query(Log).join(Question, Log.question_id == Question.id).\
+        filter(Question.set_id == set_id).all()
+    for log in submissions:
+        db.session.delete(log)
+    db.session.commit()
+
+    # Remove the uploaded files from disk
+    for material in set_obj.materials:
+        try:
+            if material.filepath and os.path.exists(material.filepath):
+                os.remove(material.filepath)
+        except OSError:
+            pass  # a missing file shouldn't stop the set from being deleted
+
+    # Cascade removes the set's questions, materials and access grants
+    db.session.delete(set_obj)
+    db.session.commit()
+
+    flash(f'Set "{title}" and all its questions were deleted.', 'success')
+    return redirect(url_for('teacher.dashboard'))
+
 @teacher_bp.route('/set/<int:set_id>/upload', methods=['POST'])
 @login_required
 def upload_material(set_id):

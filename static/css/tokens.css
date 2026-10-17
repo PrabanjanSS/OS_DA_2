@@ -1,0 +1,80 @@
+/* ==========================================================================
+   AI Grader — design tokens. Single source of truth for the whole UI.
+   Every value used in app.css resolves to one of these.
+   ========================================================================== */
+
+:root {
+    /* --- Color ----------------------------------------------------------- */
+    --color-bg: #F6F4EF;
+    --color-surface: #FFFFFF;
+    --color-surface-sunken: #FBFAF7;
+    --color-border: #E6E2D9;
+    --color-border-strong: #D9D4C8;
+    --color-ink: #1A1A17;
+    --color-muted: #6B675E;
+
+    --color-accent: #1F4D3A;
+    --color-accent-hover: #17392C;
+    --color-accent-soft: #EBF0EC;
+
+    --color-danger: #A63D2F;
+    --color-danger-hover: #893226;
+    --color-danger-soft: #F7EBE8;
+
+    /* --- Type families --------------------------------------------------- */
+    --font-serif: "Instrument Serif", "Iowan Old Style", Palatino, Georgia, "Times New Roman", serif;
+    --font-sans: "Geist", "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+    /* --- Type scale: 12 / 13 / 14 / 16 / 20 / 28 / 40 --------------------- */
+    /* Each step pairs a size with its line-height and letter-spacing.        */
+    --text-xs: 12px;    --leading-xs: 1.45;    --tracking-xs: 0.08em;
+    --text-sm: 13px;    --leading-sm: 1.5;     --tracking-sm: 0.06em;
+    --text-base: 14px;  --leading-base: 1.6;   --tracking-base: 0;
+    --text-md: 16px;    --leading-md: 1.55;    --tracking-md: -0.005em;
+    --text-lg: 20px;    --leading-lg: 1.4;     --tracking-lg: -0.01em;
+    --text-xl: 28px;    --leading-xl: 1.25;    --tracking-xl: -0.015em;
+    --text-2xl: 40px;   --leading-2xl: 1.15;   --tracking-2xl: -0.02em;
+
+    /* Tracking for uppercase labels and display headings */
+    --tracking-label: 0.08em;
+    --tracking-title: -0.012em;
+    --tracking-display: -0.02em;
+
+    /* Headings are regular weight; hierarchy comes from size and color. */
+    --weight-normal: 400;
+    --weight-medium: 500;
+
+    /* --- Spacing (4px base) --------------------------------------------- */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --space-7: 48px;
+    --space-8: 64px;
+
+    /* --- Radius, borders, elevation -------------------------------------- */
+    --radius-control: 6px;
+    --radius-card: 10px;
+    --radius-circle: 999px; /* avatars only */
+    --border-width: 1px;
+    --shadow-soft: 0 1px 2px rgba(26, 26, 23, 0.04);
+
+    /* --- Layout ----------------------------------------------------------- */
+    --layout-max: 1120px;
+    --layout-gutter: var(--space-5);
+    --nav-height: var(--space-8);
+    --measure: 65ch;
+
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 1px;
+    --transition-fast: 120ms ease;
+}
+
+@media (min-width: 768px) {
+    :root {
+        --layout-gutter: var(--space-7);
+    }
+}

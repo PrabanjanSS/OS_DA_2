@@ -6,6 +6,10 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+
+    # Shared access code required to register a teacher account.
+    # Leave empty to disable teacher self-registration entirely.
+    TEACHER_SIGNUP_CODE = os.getenv('TEACHER_SIGNUP_CODE', '')
     
     # Database
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///grading_system.db')

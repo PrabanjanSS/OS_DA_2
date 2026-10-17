@@ -1,33 +1,35 @@
 {% extends "base.html" %}
 
-{% block title %}Login - AI Grading System{% endblock %}
+{% block title %}Log in - AI Grader{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto">
-    <div class="card rounded-2xl p-8 shadow-xl">
-        <h2 class="text-3xl font-bold text-dark mb-6 text-center">Login</h2>
-        
+<div class="narrow">
+    <div class="card card--padded">
+        <span class="eyebrow">Account</span>
+        <h1 class="title-md">Log in</h1>
+        <hr class="divider">
+
         <form method="POST" action="{{ url_for('auth.login') }}">
-            <div class="mb-4">
-                <label class="block text-gray-700 font-medium mb-2">Email</label>
-                <input type="email" name="email" required 
-                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition">
+            <div class="field">
+                <label class="field-label" for="email">Email</label>
+                <input type="text" id="email" name="email" class="input" inputmode="email" autocomplete="email" required>
             </div>
-            
-            <div class="mb-6">
-                <label class="block text-gray-700 font-medium mb-2">Password</label>
-                <input type="password" name="password" required 
-                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition">
+
+            <div class="field">
+                <label class="field-label" for="password">Password</label>
+                <input type="password" id="password" name="password" class="input" required>
             </div>
-            
-            <button type="submit" class="w-full btn-primary text-white py-3 rounded-lg font-semibold">
-                Login
-            </button>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn--primary btn--block">Log in</button>
+            </div>
         </form>
-        
-        <p class="text-center mt-6 text-gray-600">
-            Don't have an account? 
-            <a href="{{ url_for('auth.signup') }}" class="text-primary hover:underline">Sign up</a>
+
+        <hr class="divider">
+
+        <p class="text-small text-muted">
+            Don't have an account?
+            <a href="{{ url_for('auth.signup') }}">Sign up</a>
         </p>
     </div>
 </div>

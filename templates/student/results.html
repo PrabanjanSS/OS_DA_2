@@ -3,53 +3,47 @@
 {% block title %}Results - {{ set.title }}{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <a href="{{ url_for('student.dashboard') }}" class="text-gray-400 hover:text-white transition">
-        ← Back to Dashboard
-    </a>
-</div>
+<a href="{{ url_for('student.dashboard') }}" class="breadcrumb">Back to dashboard</a>
 
-<div class="card rounded-2xl p-8 shadow-xl mb-6 text-center">
-    <div class="text-6xl mb-4">
-        {% if (total_score / max_total) >= 0.6 %}
-            🎉
-        {% else %}
-            📝
-        {% endif %}
+<div class="page-head">
+    <div class="page-head__text">
+        <span class="eyebrow">Result</span>
+        <h1 class="page-title">Your results</h1>
+        <p class="page-subtitle">{{ set.title }}</p>
     </div>
-    <h1 class="text-3xl font-bold text-dark mb-2">Your Results</h1>
-    <div class="text-5xl font-bold text-primary mb-2">{{ "%.1f"|format(total_score) }} / {{ max_total }}</div>
-    <div class="text-xl text-gray-600">{{ "%.1f"|format((total_score / max_total) * 100) }}%</div>
 </div>
 
-<div class="space-y-6">
+<div class="card card--spacious card--centered">
+    <div class="score-hero">{{ "%.1f"|format(total_score) }} / {{ max_total }}</div>
+    <div class="score-hero-caption">{{ "%.1f"|format((total_score / max_total) * 100) }}%</div>
+</div>
+
+<div class="stack stack--lg section">
     {% for result in results %}
-        <div class="card rounded-xl p-6 shadow-lg">
-            <div class="flex justify-between items-start mb-4">
-                <h3 class="text-lg font-bold text-dark">Question {{ loop.index }}</h3>
-                <div class="text-right">
-                    <div class="text-2xl font-bold {{ 'text-green-600' if result.score >= (result.max_score * 0.6) else 'text-red-600' }}">
-                        {{ "%.1f"|format(result.score) }}/{{ result.max_score }}
-                    </div>
-                    <div class="text-xs text-gray-500 capitalize">{{ result.source|replace('_', ' ') }}</div>
+        <div class="card">
+            <div class="row row--between row--top row--gap-lg">
+                <h3 class="section-title">Question {{ loop.index }}</h3>
+                <div>
+                    <span class="score {{ 'score--below' if result.score < (result.max_score * 0.6) }}">{{ "%.1f"|format(result.score) }}<span class="score-max">/{{ result.max_score }}</span></span>
+                    <div class="score-caption">{{ result.source|replace('_', ' ') }}</div>
                 </div>
             </div>
-            <p class="text-gray-700 font-medium mb-2">{{ result.question }}</p>
-            <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                <p class="text-sm text-gray-600 mb-1">Your Answer:</p>
-                <p class="text-gray-800">{{ result.answer }}</p>
-            </div>
-            <div class="bg-blue-50 rounded-lg p-4">
-                <p class="text-sm text-blue-600 font-medium mb-1">Feedback:</p>
-                <p class="text-blue-800">{{ result.explanation }}</p>
+            <div class="stack">
+                <p class="question-text">{{ result.question }}</p>
+                <div class="note">
+                    <span class="note-label">Your answer</span>
+                    <p class="note-body">{{ result.answer }}</p>
+                </div>
+                <div class="note note--feedback">
+                    <span class="note-label">Feedback</span>
+                    <p class="note-body">{{ result.explanation }}</p>
+                </div>
             </div>
         </div>
     {% endfor %}
 </div>
 
-<div class="mt-8 text-center">
-    <a href="{{ url_for('student.dashboard') }}" class="btn-primary text-white px-8 py-3 rounded-lg">
-        Return to Dashboard
-    </a>
+<div class="form-actions">
+    <a href="{{ url_for('student.dashboard') }}" class="btn btn--primary">Return to dashboard</a>
 </div>
 {% endblock %}

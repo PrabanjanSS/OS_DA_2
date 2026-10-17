@@ -1,5 +1,6 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect, url_for
+from flask_login import current_user
 from sqlalchemy import inspect, text
 from config import Config
 from extensions import db, login_manager
@@ -58,6 +59,11 @@ def create_app():
     # Root route
     @app.route('/')
     def index():
+        # Logged-in users go straight to their dashboard instead of the landing page.
+        if current_user.is_authenticated:
+            if current_user.role == 'teacher':
+                return redirect(url_for('teacher.dashboard'))
+            return redirect(url_for('student.dashboard'))
         return render_template('index.html')
     
     return app

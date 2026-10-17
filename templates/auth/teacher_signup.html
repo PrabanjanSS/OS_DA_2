@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Teacher sign up - AI Grader{% endblock %}
+
+{% block content %}
+<div class="narrow">
+    <div class="card card--padded">
+        <span class="eyebrow">Teacher account</span>
+        <h1 class="title-md">Sign up as a teacher</h1>
+
+        {% if not configured %}
+            <p class="text-small text-muted">
+                Teacher sign-up is currently disabled. Please contact the administrator.
+            </p>
+            <hr class="divider">
+            <p class="text-small text-muted">
+                <a href="{{ url_for('auth.signup') }}">Sign up as a student</a>
+            </p>
+
+        {% elif not unlocked %}
+            <p class="text-small text-muted">
+                Teacher accounts are restricted. Enter the access code provided by your
+                institution to continue.
+            </p>
+            <hr class="divider">
+
+            <form method="POST" action="{{ url_for('auth.teacher_signup') }}">
+                <input type="hidden" name="action" value="unlock">
+                <div class="field">
+                    <label class="field-label" for="access_code">Teacher access code</label>
+                    <input type="password" id="access_code" name="access_code" class="input"
+                        required autocomplete="off">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn--primary btn--block">Continue</button>
+                </div>
+            </form>
+
+            <hr class="divider">
+            <p class="text-small text-muted">
+                Not a teacher? <a href="{{ url_for('auth.signup') }}">Sign up as a student</a>
+            </p>
+
+        {% else %}
+            <p class="text-small text-muted">
+                Access code accepted. Complete your teacher account.
+            </p>
+            <hr class="divider">
+
+            <form method="POST" action="{{ url_for('auth.teacher_signup') }}">
+                <div class="field">
+                    <label class="field-label" for="name">Full name</label>
+                    <input type="text" id="name" name="name" class="input" required>
+                </div>
+
+                <div class="field">
+                    <label class="field-label" for="email">Email</label>
+                    <input type="text" id="email" name="email" class="input" inputmode="email" autocomplete="email" required>
+                </div>
+
+                <div class="field">
+                    <label class="field-label" for="password">Password</label>
+                    <input type="password" id="password" name="password" class="input" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn--primary btn--block">Create teacher account</button>
+                </div>
+            </form>
+
+            <hr class="divider">
+
+            <p class="text-small text-muted">
+                Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a>
+            </p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

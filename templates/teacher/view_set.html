@@ -3,67 +3,74 @@
 {% block title %}{{ set.title }}{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <a href="{{ url_for('teacher.dashboard') }}" class="text-gray-400 hover:text-white transition">
-        ← Back to Dashboard
-    </a>
-</div>
+<a href="{{ url_for('teacher.dashboard') }}" class="breadcrumb">Back to dashboard</a>
 
-<div class="card rounded-2xl p-8 shadow-xl mb-6">
-    <h1 class="text-3xl font-bold text-dark mb-2">{{ set.title }}</h1>
-    <p class="text-gray-600">{{ set.description or 'No description' }}</p>
-</div>
-
-<div class="grid lg:grid-cols-2 gap-6 mb-6">
-    <!-- Upload Materials -->
-    <div class="card rounded-xl p-6 shadow-lg">
-        <h3 class="text-xl font-bold text-dark mb-4">📚 Upload Materials</h3>
-        <form method="POST" action="{{ url_for('teacher.upload_material', set_id=set.id) }}" enctype="multipart/form-data">
-            <div class="mb-4">
-                <input type="file" name="file" accept=".pdf,.docx,.txt" required
-                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition">
-            </div>
-            <button type="submit" class="w-full btn-secondary text-white py-2 rounded-lg">
-                Upload Material
-            </button>
+<div class="page-head">
+    <div class="page-head__text">
+        <span class="eyebrow">Question set</span>
+        <h1 class="page-title">{{ set.title }}</h1>
+        <p class="page-subtitle">{{ set.description or 'No description' }}</p>
+    </div>
+    <div class="page-head__action">
+        <form method="POST" action="{{ url_for('teacher.delete_set', set_id=set.id) }}"
+            data-confirm="Delete this set permanently? Its questions, materials and student submissions will be removed.">
+            <button type="submit" class="btn btn--danger nowrap">Delete set</button>
         </form>
-        
+    </div>
+</div>
+
+<div class="grid-2 section">
+    <!-- Upload Materials -->
+    <div class="card">
+        <h2 class="section-title">Upload materials</h2>
+        <form method="POST" action="{{ url_for('teacher.upload_material', set_id=set.id) }}" enctype="multipart/form-data">
+            <div class="field">
+                <label class="field-label" for="material-file">Material file</label>
+                <input type="file" id="material-file" name="file" accept=".pdf,.docx,.txt" required class="file-input">
+                <span class="field-hint">Accepted formats: PDF, DOCX, TXT.</span>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn--primary btn--block">Upload material</button>
+            </div>
+        </form>
+
         {% if materials %}
-            <div class="mt-4 space-y-2">
+            <div class="item-list">
                 {% for material in materials %}
-                    <div class="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
-                        <span class="text-sm text-gray-700">📄 {{ material.filename }}</span>
-                        <span class="text-xs text-gray-500 uppercase">{{ material.file_type }}</span>
+                    <div class="item">
+                        <span class="item-name">{{ material.filename }}</span>
+                        <span class="item-meta">{{ material.file_type }}</span>
                     </div>
                 {% endfor %}
             </div>
         {% endif %}
     </div>
-    
+
     <!-- Grant Access -->
-    <div class="card rounded-xl p-6 shadow-lg">
-        <h3 class="text-xl font-bold text-dark mb-4">🔑 Grant Student Access</h3>
+    <div class="card">
+        <h2 class="section-title">Grant student access</h2>
         <form method="POST" action="{{ url_for('teacher.grant_access', set_id=set.id) }}">
-            <div class="mb-4">
-                <input type="email" name="student_email" required placeholder="student@email.com"
-                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition">
+            <div class="field">
+                <label class="field-label" for="student-email">Student email</label>
+                <input type="text" id="student-email" name="student_email" class="input" inputmode="email" required
+                    placeholder="student@email.com">
             </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm mb-1">Max Attempts</label>
-                <input type="number" name="max_attempts" value="1" min="1" max="10"
-                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition">
+            <div class="field">
+                <label class="field-label" for="max-attempts">Max attempts</label>
+                <input type="number" id="max-attempts" name="max_attempts" class="input input--narrow"
+                    value="1" min="1" max="10">
             </div>
-            <button type="submit" class="w-full btn-secondary text-white py-2 rounded-lg">
-                Grant Access
-            </button>
+            <div class="form-actions">
+                <button type="submit" class="btn btn--primary btn--block">Grant access</button>
+            </div>
         </form>
-        
+
         {% if access_grants %}
-            <div class="mt-4 space-y-2">
+            <div class="item-list">
                 {% for grant in access_grants %}
-                    <div class="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg">
-                        <span class="text-sm text-gray-700">👤 {{ grant.student.name }}</span>
-                        <span class="text-xs text-gray-500">{{ grant.attempts_used }}/{{ grant.max_attempts }} attempts</span>
+                    <div class="item">
+                        <span class="item-name">{{ grant.student.name }}</span>
+                        <span class="item-meta item-meta--plain">{{ grant.attempts_used }}/{{ grant.max_attempts }} attempts</span>
                     </div>
                 {% endfor %}
             </div>
@@ -72,70 +79,65 @@
 </div>
 
 <!-- Add Question -->
-<div class="card rounded-xl p-6 shadow-lg mb-6">
-    <h3 class="text-xl font-bold text-dark mb-4">➕ Add Question</h3>
+<div class="card section">
+    <h2 class="section-title">Add question</h2>
     <form method="POST" action="{{ url_for('teacher.add_question', set_id=set.id) }}">
-        <div class="mb-4">
-            <label class="block text-gray-700 font-medium mb-2">Question Text</label>
-            <textarea name="question_text" rows="3" required
-                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+        <div class="field">
+            <label class="field-label" for="question-text">Question text</label>
+            <textarea id="question-text" name="question_text" class="textarea" rows="3" required
                 placeholder="Enter your question here..."></textarea>
         </div>
-        <div class="mb-4">
-            <label class="block text-gray-700 font-medium mb-2">Ideal Answer (Optional)</label>
-            <textarea name="ideal_answer" rows="2"
-                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition"
+        <div class="field">
+            <label class="field-label" for="ideal-answer">Ideal answer (optional)</label>
+            <textarea id="ideal-answer" name="ideal_answer" class="textarea" rows="2"
                 placeholder="Reference answer for validation..."></textarea>
         </div>
-        <div class="mb-4">
-            <label class="block text-gray-700 font-medium mb-2">Max Score</label>
-            <input type="number" name="max_score" value="10" min="1" max="100"
-                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition">
+        <div class="field">
+            <label class="field-label" for="max-score">Max score</label>
+            <input type="number" id="max-score" name="max_score" class="input input--narrow"
+                value="10" min="1" max="100">
         </div>
-        <div class="mb-4">
-            <label class="block text-gray-700 font-medium mb-2">Grading Strictness</label>
-            <select name="strictness"
-                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition">
+        <div class="field">
+            <label class="field-label" for="strictness">Grading strictness</label>
+            <select id="strictness" name="strictness" class="select">
                 {% for level, level_label in strictness_labels.items() %}
                     <option value="{{ level }}" {% if level == 3 %}selected{% endif %}>
-                        {{ level }} – {{ level_label }}
+                        {{ level }} &ndash; {{ level_label }}
                     </option>
                 {% endfor %}
             </select>
-            <p class="text-xs text-gray-500 mt-1">How harshly the AI should grade answers to this question.</p>
+            <span class="field-hint">How harshly the AI should grade answers to this question.</span>
         </div>
-        <button type="submit" class="btn-primary text-white px-6 py-2 rounded-lg">
-            Add Question
-        </button>
+        <div class="form-actions">
+            <button type="submit" class="btn btn--primary">Add question</button>
+        </div>
     </form>
 </div>
 
 <!-- Questions List -->
-<div class="card rounded-xl p-6 shadow-lg mb-6">
-    <div class="flex justify-between items-center mb-4">
-        <h3 class="text-xl font-bold text-dark">📝 Questions ({{ questions|length }})</h3>
-        <a href="{{ url_for('teacher.set_analytics', set_id=set.id) }}" class="text-primary hover:underline">
-            View Analytics →
-        </a>
+<div class="card section">
+    <div class="section-head">
+        <h2 class="section-title">Questions ({{ questions|length }})</h2>
+        <a href="{{ url_for('teacher.set_analytics', set_id=set.id) }}" class="text-small">View analytics</a>
     </div>
-    
+
     {% if questions %}
-        <div class="space-y-4">
+        <div class="stack">
             {% for question in questions %}
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-gray-800 font-medium">{{ question.question_text }}</p>
-                    <div class="flex gap-4 mt-2 text-sm text-gray-500">
-                        <span>Max Score: {{ question.max_score }}</span>
+                <div class="panel">
+                    <p class="question-text">{{ question.question_text }}</p>
+                    <div class="question-meta">
+                        <span>Max score: {{ question.max_score }}</span>
                         <span>Strictness: {{ strictness_labels.get(question.strictness or 3, 'Balanced') }}</span>
                         {% if question.ideal_answer %}
-                            <span>✓ Has reference answer</span>
+                            <span>Reference answer provided</span>
                         {% endif %}
                     </div>
                 </div>
             {% endfor %}
         </div>
     {% else %}
-        <p class="text-gray-500 text-center py-4">No questions added yet</p>
+        <p class="text-muted text-small">No questions added yet.</p>
     {% endif %}
 </div>
 {% endblock %}

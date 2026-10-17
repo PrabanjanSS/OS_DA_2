@@ -1,45 +1,47 @@
 {% extends "base.html" %}
 
-{% block title %}Teacher Dashboard{% endblock %}
+{% block title %}Teacher dashboard{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-    <h1 class="text-3xl font-bold text-white mb-2">Teacher Dashboard</h1>
-    <p class="text-gray-400">Manage your question sets and materials</p>
-</div>
-
-<div class="flex justify-between items-center mb-6">
-    <h2 class="text-xl font-semibold text-white">Your Question Sets</h2>
-    <a href="{{ url_for('teacher.create_set') }}" class="btn-primary text-white px-4 py-2 rounded-lg">
-        + Create New Set
-    </a>
+<div class="page-head">
+    <div class="page-head__text">
+        <span class="eyebrow">Dashboard</span>
+        <h1 class="page-title">Your question sets</h1>
+        <p class="page-subtitle">Create sets, upload materials, grant access, and grade submissions.</p>
+    </div>
+    <div class="page-head__action">
+        <a href="{{ url_for('teacher.create_set') }}" class="btn btn--primary">Create new set</a>
+    </div>
 </div>
 
 {% if sets %}
-    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="grid-3">
         {% for set in sets %}
-            <div class="card rounded-xl p-6 shadow-lg hover:shadow-xl transition">
-                <h3 class="text-xl font-bold text-dark mb-2">{{ set.title }}</h3>
-                <p class="text-gray-600 text-sm mb-4">{{ set.description or 'No description' }}</p>
-                <div class="flex gap-2 text-sm text-gray-500 mb-4">
-                    <span>📝 {{ set.questions|length }} questions</span>
-                    <span>📚 {{ set.materials|length }} materials</span>
+            <div class="card">
+                <div class="stack">
+                    <div>
+                        <h3 class="section-title">{{ set.title }}</h3>
+                        <p class="text-muted text-small">{{ set.description or 'No description' }}</p>
+                    </div>
+
+                    <p class="meta">{{ set.questions|length }} questions &middot; {{ set.materials|length }} materials</p>
+
+                    <div class="row row--tight">
+                        <a href="{{ url_for('teacher.view_set', set_id=set.id) }}" class="btn btn--primary">View set</a>
+                        <form method="POST" action="{{ url_for('teacher.delete_set', set_id=set.id) }}"
+                            data-confirm="Delete this set permanently? Its questions, materials and student submissions will be removed.">
+                            <button type="submit" class="btn btn--danger" title="Delete this set">Delete</button>
+                        </form>
+                    </div>
                 </div>
-                <a href="{{ url_for('teacher.view_set', set_id=set.id) }}" 
-                    class="btn-primary text-white px-4 py-2 rounded-lg text-sm block text-center">
-                    View Set
-                </a>
             </div>
         {% endfor %}
     </div>
 {% else %}
-    <div class="card rounded-xl p-12 text-center">
-        <div class="text-5xl mb-4">📭</div>
-        <h3 class="text-xl font-semibold text-dark mb-2">No Question Sets Yet</h3>
-        <p class="text-gray-600 mb-6">Create your first question set to get started</p>
-        <a href="{{ url_for('teacher.create_set') }}" class="btn-primary text-white px-6 py-3 rounded-lg">
-            Create Your First Set
-        </a>
+    <div class="empty">
+        <h3 class="empty-title">No question sets yet</h3>
+        <p class="empty-text">Create your first question set to get started.</p>
+        <a href="{{ url_for('teacher.create_set') }}" class="btn btn--primary">Create your first set</a>
     </div>
 {% endif %}
 {% endblock %}

@@ -1,64 +1,58 @@
 {% extends "base.html" %}
 
-{% block title %}Home - AI Grading System{% endblock %}
+{% block title %}Home - AI Grader{% endblock %}
 
 {% block content %}
-<div class="text-center py-16">
-    <h1 class="text-5xl font-bold text-white mb-6">
-        Welcome to <span class="text-primary">AI Grading System</span>
-    </h1>
-    <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+<div class="card card--spacious card--centered">
+    <span class="eyebrow">Automated assessment</span>
+    <h1 class="page-title">Welcome to AI Grader</h1>
+    <p class="page-subtitle">
         An intelligent automated grading platform using RAG, AI validation, and OS concurrency concepts.
     </p>
-    
-    <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mt-12">
-        <div class="card rounded-2xl p-8 shadow-xl hover:shadow-2xl transition">
-            <div class="text-4xl mb-4">👨‍🏫</div>
-            <h2 class="text-2xl font-bold text-dark mb-4">For Teachers</h2>
-            <ul class="text-gray-600 space-y-2 text-left">
-                <li>✓ Create question sets</li>
-                <li>✓ Upload study materials (PDF, DOCX, TXT)</li>
-                <li>✓ Grant access to students</li>
-                <li>✓ View detailed analytics</li>
-            </ul>
-            <a href="{{ url_for('auth.signup') }}" class="btn-primary text-white px-6 py-3 rounded-lg inline-block mt-6">
-                Sign Up as Teacher
-            </a>
-        </div>
-        
-        <div class="card rounded-2xl p-8 shadow-xl hover:shadow-2xl transition">
-            <div class="text-4xl mb-4">👨‍🎓</div>
-            <h2 class="text-2xl font-bold text-dark mb-4">For Students</h2>
-            <ul class="text-gray-600 space-y-2 text-left">
-                <li>✓ Access assigned question sets</li>
-                <li>✓ Submit answers with AI validation</li>
-                <li>✓ Get instant feedback & scores</li>
-                <li>✓ Track submission history</li>
-            </ul>
-            <a href="{{ url_for('auth.signup') }}" class="btn-secondary text-white px-6 py-3 rounded-lg inline-block mt-6">
-                Sign Up as Student
-            </a>
+</div>
+
+<div class="grid-2 section">
+    <div class="card">
+        <h2 class="section-title">For teachers</h2>
+        <ul class="plain-list">
+            <li>Create question sets</li>
+            <li>Upload study materials (PDF, DOCX, TXT)</li>
+            <li>Grant access to students</li>
+            <li>View detailed analytics</li>
+        </ul>
+        <div class="form-actions">
+            <a href="{{ url_for('auth.teacher_signup') }}" class="btn btn--primary">Sign up as teacher</a>
         </div>
     </div>
-    
-    <div class="mt-16 bg-white/10 backdrop-blur-md rounded-2xl p-8 max-w-4xl mx-auto">
-        <h3 class="text-2xl font-bold text-white mb-4">System Features</h3>
-        <div class="grid md:grid-cols-3 gap-6 text-gray-300">
-            <div>
-                <div class="text-3xl mb-2">🧠</div>
-                <h4 class="font-semibold text-white">AI Validation</h4>
-                <p class="text-sm">Uses Claude API for intelligent answer grading</p>
-            </div>
-            <div>
-                <div class="text-3xl mb-2">📚</div>
-                <h4 class="font-semibold text-white">RAG-Based</h4>
-                <p class="text-sm">Validates against teacher materials using TF-IDF</p>
-            </div>
-            <div>
-                <div class="text-3xl mb-2">⚡</div>
-                <h4 class="font-semibold text-white">Threading</h4>
-                <p class="text-sm">Thread pool & locks for concurrent processing</p>
-            </div>
+
+    <div class="card">
+        <h2 class="section-title">For students</h2>
+        <ul class="plain-list">
+            <li>Access assigned question sets</li>
+            <li>Submit answers with AI validation</li>
+            <li>Get instant feedback and scores</li>
+            <li>Track submission history</li>
+        </ul>
+        <div class="form-actions">
+            <a href="{{ url_for('auth.signup') }}" class="btn btn--outline">Sign up as student</a>
+        </div>
+    </div>
+</div>
+
+<div class="card section">
+    <h2 class="section-title">System features</h2>
+    <div class="feature-grid">
+        <div>
+            <h3 class="feature-title">AI validation</h3>
+            <p class="feature-text">Uses Claude API for intelligent answer grading</p>
+        </div>
+        <div>
+            <h3 class="feature-title">RAG-based</h3>
+            <p class="feature-text">Validates against teacher materials using TF-IDF</p>
+        </div>
+        <div>
+            <h3 class="feature-title">Threading</h3>
+            <p class="feature-text">Thread pool and locks for concurrent processing</p>
         </div>
     </div>
 </div>

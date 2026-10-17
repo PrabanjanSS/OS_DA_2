@@ -1,59 +1,55 @@
 {% extends "base.html" %}
 
-{% block title %}Submission History{% endblock %}
+{% block title %}Submission history{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <a href="{{ url_for('student.dashboard') }}" class="text-gray-400 hover:text-white transition">
-        ← Back to Dashboard
-    </a>
-</div>
+<a href="{{ url_for('student.dashboard') }}" class="breadcrumb">Back to dashboard</a>
 
-<div class="card rounded-2xl p-8 shadow-xl mb-6">
-    <h1 class="text-3xl font-bold text-dark mb-2">Submission History</h1>
-    <p class="text-gray-600">View all your past submissions and scores</p>
+<div class="page-head">
+    <div class="page-head__text">
+        <span class="eyebrow">History</span>
+        <h1 class="page-title">Submission history</h1>
+        <p class="page-subtitle">View all your past submissions and scores.</p>
+    </div>
 </div>
 
 {% if logs %}
-    <div class="space-y-4">
+    <div class="stack stack--lg">
         {% for log in logs %}
-            <div class="card rounded-xl p-6 shadow-lg">
-                <div class="flex justify-between items-start mb-4">
+            <div class="card">
+                <div class="row row--between row--top row--gap-lg">
                     <div>
-                        <h3 class="text-lg font-bold text-dark">{{ log.question.question_text }}</h3>
-                        <p class="text-sm text-gray-500">{{ log.question.set.title }}</p>
+                        <h3 class="section-title">{{ log.question.question_text }}</h3>
+                        <p class="meta meta--plain">{{ log.question.set.title }}</p>
                     </div>
-                    <div class="text-right">
-                        <div class="text-2xl font-bold {{ 'text-green-600' if log.score >= (log.max_score * 0.6) else 'text-red-600' }}">
-                            {{ "%.1f"|format(log.score) }}/{{ log.max_score }}
+                    <div>
+                        <span class="score {{ 'score--below' if log.score < (log.max_score * 0.6) }}">{{ "%.1f"|format(log.score) }}<span class="score-max">/{{ log.max_score }}</span></span>
+                        <div class="score-caption">{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</div>
+                    </div>
+                </div>
+                <div class="stack">
+                    <div class="note">
+                        <span class="note-label">Your answer</span>
+                        <p class="note-body">{{ log.answer }}</p>
+                    </div>
+                    <div class="row row--wrap">
+                        <span class="badge badge--plain">{{ log.source_used|replace('_', ' ') }}</span>
+                        <span class="meta meta--plain">Confidence: {{ "%.2f"|format(log.confidence) }}</span>
+                    </div>
+                    {% if log.ai_response %}
+                        <div class="note note--feedback">
+                            <span class="note-label">Feedback</span>
+                            <p class="note-body">{{ log.ai_response }}</p>
                         </div>
-                        <div class="text-xs text-gray-500">{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</div>
-                    </div>
+                    {% endif %}
                 </div>
-                <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                    <p class="text-sm text-gray-600 mb-1">Your Answer:</p>
-                    <p class="text-gray-800">{{ log.answer }}</p>
-                </div>
-                <div class="flex items-center gap-4 text-sm">
-                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full capitalize">
-                        {{ log.source_used|replace('_', ' ') }}
-                    </span>
-                    <span class="text-gray-500">Confidence: {{ "%.2f"|format(log.confidence) }}</span>
-                </div>
-                {% if log.ai_response %}
-                    <div class="bg-blue-50 rounded-lg p-4 mt-4">
-                        <p class="text-sm text-blue-600 font-medium mb-1">Feedback:</p>
-                        <p class="text-blue-800">{{ log.ai_response }}</p>
-                    </div>
-                {% endif %}
             </div>
         {% endfor %}
     </div>
 {% else %}
-    <div class="card rounded-xl p-12 text-center">
-        <div class="text-5xl mb-4">📭</div>
-        <h3 class="text-xl font-semibold text-dark mb-2">No Submissions Yet</h3>
-        <p class="text-gray-600">Start answering questions to see your history here</p>
+    <div class="empty">
+        <h3 class="empty-title">No submissions yet</h3>
+        <p class="empty-text">Start answering questions to see your history here.</p>
     </div>
 {% endif %}
 {% endblock %}
