@@ -58,6 +58,8 @@ class Question(db.Model):
     question_text = db.Column(db.Text, nullable=False)
     ideal_answer = db.Column(db.Text)  # Optional reference answer
     max_score = db.Column(db.Integer, default=10)
+    # Grading harshness chosen by the teacher: 1=Very Lenient ... 5=Very Strict
+    strictness = db.Column(db.Integer, default=3)
     
     # Relationships
     logs = db.relationship('Log', backref='question', lazy=True)

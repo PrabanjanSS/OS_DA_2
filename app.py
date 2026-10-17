@@ -8,17 +8,31 @@ from teacher.routes import teacher_bp
 from student.routes import student_bp
 
 
+# Columns added after the initial release: table -> column -> column definition.
+# Applied on startup so existing SQLite databases keep working without a reset.
+NEW_COLUMNS = {
+    'logs': {
+        'manually_graded': 'BOOLEAN DEFAULT 0',
+        'teacher_comment': 'TEXT',
+    },
+    'questions': {
+        'strictness': 'INTEGER DEFAULT 3',
+    },
+}
+
+
 def ensure_schema():
     """Add newly introduced columns to an existing SQLite database."""
     inspector = inspect(db.engine)
-    if 'logs' not in inspector.get_table_names():
-        return
-    columns = {col['name'] for col in inspector.get_columns('logs')}
+    existing_tables = set(inspector.get_table_names())
     with db.engine.begin() as conn:
-        if 'manually_graded' not in columns:
-            conn.execute(text('ALTER TABLE logs ADD COLUMN manually_graded BOOLEAN DEFAULT 0'))
-        if 'teacher_comment' not in columns:
-            conn.execute(text('ALTER TABLE logs ADD COLUMN teacher_comment TEXT'))
+        for table, columns in NEW_COLUMNS.items():
+            if table not in existing_tables:
+                continue
+            present = {col['name'] for col in inspector.get_columns(table)}
+            for column, definition in columns.items():
+                if column not in present:
+                    conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {column} {definition}'))
 
 def create_app():
     app = Flask(__name__)

@@ -96,7 +96,8 @@ def submit_answer(set_id):
         validation_result = validator.validate_answer(
             question.question_text,
             answer,
-            question.ideal_answer
+            question.ideal_answer,
+            question.strictness
         )
         
         # Log the submission (thread-safe)

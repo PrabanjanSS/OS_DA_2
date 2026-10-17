@@ -6,6 +6,33 @@ from config import Config
 from services.similarity import SimilarityMatcher
 from services.concurrency import run_in_thread
 
+# Grading strictness a teacher can choose per question.
+# The float is the similarity needed for an answer to count as "correct" on the
+# local (non-AI) paths; level 3 keeps the historical 0.5 threshold unchanged.
+STRICTNESS_LEVELS = {
+    1: ('Very Lenient', 0.35, 'Be very lenient: award credit for rough or partial understanding '
+                              'and only penalise answers that are clearly wrong or off-topic.'),
+    2: ('Lenient', 0.45, 'Be lenient: give the student the benefit of the doubt and award '
+                         'partial credit for partially correct answers.'),
+    3: ('Balanced', 0.5, 'Grade with a balanced level of strictness.'),
+    4: ('Strict', 0.6, 'Be strict: require accurate and complete answers and penalise vague or '
+                       'incomplete responses.'),
+    5: ('Very Strict', 0.7, 'Be very strict: expect precise, complete answers using correct '
+                            'terminology and deduct heavily for any gaps.'),
+}
+DEFAULT_STRICTNESS = 3
+
+
+def strictness_profile(strictness) -> tuple:
+    """Clamp a question's strictness to a known level: (label, threshold, instruction)."""
+    try:
+        level = int(strictness)
+    except (TypeError, ValueError):
+        level = DEFAULT_STRICTNESS
+    level = min(max(level, 1), 5)
+    return STRICTNESS_LEVELS[level]
+
+
 class AnswerValidator:
     """
     Validation chain: Materials → AI API → Fallback Dataset
@@ -36,9 +63,12 @@ class AnswerValidator:
         if chunks:
             self.similarity_matcher.index_materials(chunks)
     
-    def validate_answer(self, question: str, answer: str, ideal_answer: Optional[str] = None) -> Dict:
+    def validate_answer(self, question: str, answer: str, ideal_answer: Optional[str] = None,
+                        strictness: int = DEFAULT_STRICTNESS) -> Dict:
         """
         Main validation chain with priority fallback.
+        `strictness` (1 = very lenient … 5 = very strict) controls how harshly the
+        answer is graded; it is set per question by the teacher.
         Returns: {
             'score': float,
             'max_score': int,
@@ -60,7 +90,7 @@ class AnswerValidator:
             context = '\n'.join([chunk[0] for chunk in relevant_chunks]) if relevant_chunks else ""
             
             try:
-                result = self._validate_with_ai(question, answer, ideal_answer, context)
+                result = self._validate_with_ai(question, answer, ideal_answer, context, strictness)
                 self.last_api_call = time.time()
                 return result
             except Exception as e:
@@ -71,12 +101,13 @@ class AnswerValidator:
         
         if relevant_chunks and relevant_chunks[0][1] > Config.SIMILARITY_THRESHOLD:
             context = '\n'.join([chunk[0] for chunk in relevant_chunks])
-            return self._validate_with_materials(question, answer, context, relevant_chunks[0][1])
+            return self._validate_with_materials(question, answer, context, relevant_chunks[0][1], strictness)
         
         # Priority 3: Fallback to local similarity (no external API)
-        return self._validate_with_similarity(question, answer, ideal_answer)
+        return self._validate_with_similarity(question, answer, ideal_answer, strictness)
     
-    def _validate_with_materials(self, question: str, answer: str, context: str, similarity: float) -> Dict:
+    def _validate_with_materials(self, question: str, answer: str, context: str, similarity: float,
+                                 strictness: int = DEFAULT_STRICTNESS) -> Dict:
         """
         Validate using teacher materials as reference.
         Improved scoring to be more lenient.
@@ -97,16 +128,20 @@ class AnswerValidator:
         if similarity_score > 0 and score < 1:
             score = 1.0
         
+        label, threshold, _ = strictness_profile(strictness)
+
         return {
             'score': score,
             'max_score': Config.MAX_SCORE,
-            'correct': score >= Config.MAX_SCORE * 0.5,  # Lowered threshold from 0.6 to 0.5
-            'explanation': f"Answer validated against teacher materials. Similarity: {similarity_score:.2f} (boosted: {boosted_score:.2f})",
+            'correct': score >= Config.MAX_SCORE * threshold,
+            'explanation': f"Answer validated against teacher materials ({label} strictness). "
+                           f"Similarity: {similarity_score:.2f} (boosted: {boosted_score:.2f})",
             'confidence': similarity_score,
             'source_used': 'material_match'
         }
     
-    def _validate_with_ai(self, question: str, answer: str, ideal_answer: Optional[str] = None, context: str = "") -> Dict:
+    def _validate_with_ai(self, question: str, answer: str, ideal_answer: Optional[str] = None,
+                          context: str = "", strictness: int = DEFAULT_STRICTNESS) -> Dict:
         """
         Validate using Google Gemini API with teacher materials as context.
         """
@@ -128,13 +163,20 @@ IMPORTANT: Use these reference materials to determine if the student's answer is
         if ideal_answer:
             prompt += f"\nIdeal Answer (reference): {ideal_answer}"
         
-        prompt += """
-Grade the answer on a scale of 0-10 based on:
+        label, _, instruction = strictness_profile(strictness)
+        prompt += f"""
+Grading strictness: {label}. {instruction}
+The teacher set this strictness level for this question, so apply it when choosing the score.
+
+Grade the answer on a scale of 0-{Config.MAX_SCORE} based on:
 1. Accuracy and completeness
 2. Understanding of key concepts
 3. Use of correct terminology
 4. Relevance to the question
+"""
 
+        # Kept as a plain string so the JSON braces aren't read as f-string fields
+        prompt += """
 Respond ONLY with a JSON object in this exact format:
 {
     "score": <number 0-10>,
@@ -149,47 +191,15 @@ Respond ONLY with a JSON object in this exact format:
                 prompt,
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.3,
-                    max_output_tokens=1024,  # Increased to 1024 to get full JSON
+                    # 2048 so the JSON isn't cut off by thinking tokens on 2.5-flash
+                    max_output_tokens=2048,
                 )
             )
             
-            response_text = response.text
+            response_text = response.text or ''
             print(f"Raw AI response length: {len(response_text)} characters")  # Debug logging
-            
-            # Try to extract JSON from response (might be in markdown code blocks)
-            json_text = response_text
-            if '```json' in response_text:
-                # Extract JSON from markdown code block
-                start = response_text.find('```json') + 7
-                end = response_text.find('```', start)
-                if end > start:
-                    json_text = response_text[start:end].strip()
-            elif '```' in response_text:
-                # Extract from any code block
-                start = response_text.find('```') + 3
-                end = response_text.find('```', start)
-                if end > start:
-                    json_text = response_text[start:end].strip()
-            
-            # Try to parse JSON
-            try:
-                result = json.loads(json_text)
-            except json.JSONDecodeError:
-                # If JSON is incomplete, try to fix it by closing braces
-                # Count opening and closing braces
-                open_braces = json_text.count('{')
-                close_braces = json_text.count('}')
-                if open_braces > close_braces:
-                    json_text += '}' * (open_braces - close_braces)
-                
-                # Count opening and closing brackets
-                open_brackets = json_text.count('[')
-                close_brackets = json_text.count(']')
-                if open_brackets > close_brackets:
-                    json_text += ']' * (open_brackets - close_brackets)
-                
-                # Try parsing again
-                result = json.loads(json_text)
+
+            result = self._extract_json(response_text)
             
             return {
                 'score': result.get('score', 0),
@@ -203,8 +213,51 @@ Respond ONLY with a JSON object in this exact format:
             print(f"Error parsing AI response: {e}")
             print(f"Response was: {response_text if 'response_text' in locals() else 'N/A'}")
             raise
-    
-    def _validate_with_similarity(self, question: str, answer: str, ideal_answer: Optional[str] = None) -> Dict:
+
+    @staticmethod
+    def _extract_json(response_text: str) -> Dict:
+        """
+        Pull the JSON object out of an AI response.
+
+        Handles markdown code fences even when a truncated response dropped the
+        closing fence, plus JSON cut off mid-object.
+        """
+        text = response_text.strip()
+
+        # Strip a ```json / ``` code block, tolerating a missing closing fence
+        if '```' in text:
+            block = text[text.find('```') + 3:]
+            if '\n' in block:
+                block = block.split('\n', 1)[1]  # drop the "json" language hint
+            end = block.find('```')
+            text = (block[:end] if end != -1 else block).strip()
+
+        # Candidate payloads: the stripped text and its widest brace span
+        candidates = [text]
+        start, last = text.find('{'), text.rfind('}')
+        if start != -1 and last > start and text[start:last + 1] != text:
+            candidates.append(text[start:last + 1])
+
+        for candidate in candidates:
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError:
+                pass
+            # Likely truncated: close any dangling string, brace or bracket
+            repaired = candidate
+            if repaired.count('"') % 2 == 1:
+                repaired += '"'
+            repaired += '}' * max(0, repaired.count('{') - repaired.count('}'))
+            repaired += ']' * max(0, repaired.count('[') - repaired.count(']'))
+            try:
+                return json.loads(repaired)
+            except json.JSONDecodeError:
+                pass
+
+        raise ValueError('No JSON object found in AI response')
+
+    def _validate_with_similarity(self, question: str, answer: str, ideal_answer: Optional[str] = None,
+                                  strictness: int = DEFAULT_STRICTNESS) -> Dict:
         """
         Fallback: Use local TF-IDF similarity without external API.
         Improved scoring to be more lenient.
@@ -224,11 +277,14 @@ Respond ONLY with a JSON object in this exact format:
         if similarity > 0 and score < 1:
             score = 1.0
         
+        label, threshold, _ = strictness_profile(strictness)
+
         return {
             'score': score,
             'max_score': Config.MAX_SCORE,
-            'correct': score >= Config.MAX_SCORE * 0.5,  # Lowered from 0.6 to 0.5
-            'explanation': f'Validated using local similarity matching (fallback mode). Similarity: {similarity:.2f}',
+            'correct': score >= Config.MAX_SCORE * threshold,
+            'explanation': f'Validated using local similarity matching ({label} strictness, '
+                           f'fallback mode). Similarity: {similarity:.2f}',
             'confidence': boosted_similarity,
             'source_used': 'fallback_dataset'
         }

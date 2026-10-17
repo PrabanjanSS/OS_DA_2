@@ -92,6 +92,18 @@
             <input type="number" name="max_score" value="10" min="1" max="100"
                 class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition">
         </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Grading Strictness</label>
+            <select name="strictness"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition">
+                {% for level, level_label in strictness_labels.items() %}
+                    <option value="{{ level }}" {% if level == 3 %}selected{% endif %}>
+                        {{ level }} – {{ level_label }}
+                    </option>
+                {% endfor %}
+            </select>
+            <p class="text-xs text-gray-500 mt-1">How harshly the AI should grade answers to this question.</p>
+        </div>
         <button type="submit" class="btn-primary text-white px-6 py-2 rounded-lg">
             Add Question
         </button>
@@ -114,6 +126,7 @@
                     <p class="text-gray-800 font-medium">{{ question.question_text }}</p>
                     <div class="flex gap-4 mt-2 text-sm text-gray-500">
                         <span>Max Score: {{ question.max_score }}</span>
+                        <span>Strictness: {{ strictness_labels.get(question.strictness or 3, 'Balanced') }}</span>
                         {% if question.ideal_answer %}
                             <span>✓ Has reference answer</span>
                         {% endif %}

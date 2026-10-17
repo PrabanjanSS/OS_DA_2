@@ -4,6 +4,7 @@ from flask_login import login_required, current_user
 from models import Set, Material, Question, AccessGrant, Log, User
 from extensions import db
 from services.file_parser import extract_text_from_file, chunk_text
+from services.validator import DEFAULT_STRICTNESS, STRICTNESS_LEVELS
 from werkzeug.utils import secure_filename
 
 teacher_bp = Blueprint('teacher', __name__)
@@ -55,7 +56,8 @@ def view_set(set_id):
     access_grants = AccessGrant.query.filter_by(set_id=set_id).all()
     
     return render_template('teacher/view_set.html', set=set_obj, materials=materials, 
-                          questions=questions, access_grants=access_grants)
+                          questions=questions, access_grants=access_grants,
+                          strictness_labels={level: data[0] for level, data in STRICTNESS_LEVELS.items()})
 
 @teacher_bp.route('/set/<int:set_id>/upload', methods=['POST'])
 @login_required
@@ -122,12 +124,20 @@ def add_question(set_id):
     question_text = request.form.get('question_text')
     ideal_answer = request.form.get('ideal_answer')
     max_score = int(request.form.get('max_score', 10))
-    
+
+    # How harshly the AI should grade this question (1 = very lenient, 5 = very strict)
+    try:
+        strictness = int(request.form.get('strictness', DEFAULT_STRICTNESS))
+    except (TypeError, ValueError):
+        strictness = DEFAULT_STRICTNESS
+    strictness = min(max(strictness, 1), 5)
+
     question = Question(
         set_id=set_id,
         question_text=question_text,
         ideal_answer=ideal_answer,
-        max_score=max_score
+        max_score=max_score,
+        strictness=strictness
     )
     db.session.add(question)
     db.session.commit()
