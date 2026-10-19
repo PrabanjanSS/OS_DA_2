@@ -1,6 +1,5 @@
 import os
-from flask import Flask, render_template, redirect, url_for
-from flask_login import current_user
+from flask import Flask, render_template
 from sqlalchemy import inspect, text
 from config import Config
 from extensions import db, login_manager
@@ -15,9 +14,18 @@ NEW_COLUMNS = {
     'logs': {
         'manually_graded': 'BOOLEAN DEFAULT 0',
         'teacher_comment': 'TEXT',
+        'submitted_late': 'BOOLEAN DEFAULT 0',
     },
     'questions': {
         'strictness': 'INTEGER DEFAULT 3',
+    },
+    'sets': {
+        'book_mode': "TEXT DEFAULT 'open_book'",
+        'time_limit_minutes': 'INTEGER',
+    },
+    'access_grants': {
+        'attempt_started_at': 'DATETIME',
+        'attempt_deadline': 'DATETIME',
     },
 }
 
@@ -59,13 +67,11 @@ def create_app():
     # Root route
     @app.route('/')
     def index():
-        # Logged-in users go straight to their dashboard instead of the landing page.
-        if current_user.is_authenticated:
-            if current_user.role == 'teacher':
-                return redirect(url_for('teacher.dashboard'))
-            return redirect(url_for('student.dashboard'))
+        # Always the landing page: starting the server lands here even if the
+        # browser still holds a session from a previous run. Signed-in users
+        # reach their dashboard from the navbar link instead.
         return render_template('index.html')
-    
+
     return app
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,6 +11,13 @@ class Config:
     # Shared access code required to register a teacher account.
     # Leave empty to disable teacher self-registration entirely.
     TEACHER_SIGNUP_CODE = os.getenv('TEACHER_SIGNUP_CODE', '')
+
+    # App-wide idle session timeout: a signed-in user is logged out after this
+    # many minutes without a request. SESSION_REFRESH_EACH_REQUEST makes the
+    # window slide on every request, so only inactivity ends the session.
+    SESSION_TIMEOUT_MINUTES = int(os.getenv('SESSION_TIMEOUT_MINUTES', '30'))
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=SESSION_TIMEOUT_MINUTES)
+    SESSION_REFRESH_EACH_REQUEST = True
     
     # Database
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///grading_system.db')

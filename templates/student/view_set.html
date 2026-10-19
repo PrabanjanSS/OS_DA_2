@@ -13,9 +13,78 @@
     </div>
     <div class="page-head__action row row--tight">
         <span class="badge badge--accent">{{ remaining_attempts }} attempts remaining</span>
-        <span class="meta meta--plain">{{ questions|length }} questions</span>
+        <span class="badge badge--plain">{{ 'Closed book' if closed_book else 'Open book' }}</span>
+        <span class="meta meta--plain nowrap">{{ (time_limit_minutes ~ ' min limit') if time_limit_minutes else 'No time limit' }}</span>
+        <span class="meta meta--plain nowrap">{{ questions|length }} questions</span>
     </div>
 </div>
+
+{% if awaiting_start %}
+    <!-- The attempt has not been started yet: materials are open, answers are not -->
+    <div class="card card--padded section">
+        <span class="eyebrow">Before you start</span>
+        <h2 class="section-title">{{ 'Closed book' if closed_book else 'Timed attempt' }}</h2>
+        <p class="text-muted text-small">
+            {% if closed_book %}
+                These materials are readable until you start. They close as soon as the attempt begins.
+            {% else %}
+                The materials stay available beside the questions while you answer.
+            {% endif %}
+            {% if time_limit_minutes %}You will have {{ time_limit_minutes }} minutes to finish.{% endif %}
+        </p>
+
+        {% if materials %}
+            <div class="item-list">
+                {% for material in materials %}
+                    <div class="item">
+                        <a class="item-name" href="{{ url_for('student.view_material', set_id=set.id, material_id=material.id) }}"
+                            target="_blank" rel="noopener">{{ material.filename }}</a>
+                        <span class="item-meta">{{ material.file_type }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            <p class="text-muted text-small">Files open in a new tab so you can keep them beside the questions.</p>
+        {% else %}
+            <p class="text-muted text-small">No materials have been uploaded for this set.</p>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('student.start_attempt', set_id=set.id) }}">
+            <div class="form-actions">
+                <button type="submit" class="btn btn--primary btn--lg">Start attempt</button>
+                <p class="text-muted text-small">An attempt is counted when you submit, not when you start.</p>
+            </div>
+        </form>
+    </div>
+{% else %}
+
+    {% if show_materials and materials %}
+        <div class="card section">
+            <div class="section-head">
+                <h2 class="section-title">Study materials</h2>
+                <span class="meta meta--plain">Open book</span>
+            </div>
+            <div class="item-list">
+                {% for material in materials %}
+                    <div class="item">
+                        <a class="item-name" href="{{ url_for('student.view_material', set_id=set.id, material_id=material.id) }}"
+                            target="_blank" rel="noopener">{{ material.filename }}</a>
+                        <span class="item-meta">{{ material.file_type }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            <p class="text-muted text-small">Open a file in a new tab to keep it beside the questions.</p>
+        </div>
+    {% elif closed_book %}
+        <div class="card section">
+            <p class="text-muted text-small">Closed book: the materials stay hidden until this attempt ends.</p>
+        </div>
+    {% endif %}
+
+    {% if attempt_deadline %}
+        <p class="meta meta--plain section">
+            Submit before {{ attempt_deadline.strftime('%H:%M') }} &ndash; answers sent after that are still graded, but flagged as late.
+        </p>
+    {% endif %}
 
 <form method="POST" action="{{ url_for('student.submit_answer', set_id=set.id) }}" class="section">
     <div class="stack stack--lg">
@@ -42,4 +111,5 @@
         <p class="text-muted text-small">This will use 1 of your {{ remaining_attempts }} remaining attempts.</p>
     </div>
 </form>
+{% endif %}
 {% endblock %}

@@ -2,57 +2,53 @@
 
 {% block title %}Home - AI Grader{% endblock %}
 
+{% block body_class %}page-home{% endblock %}
+
 {% block content %}
-<div class="card card--spacious card--centered">
-    <span class="eyebrow">Automated assessment</span>
-    <h1 class="page-title">Welcome to AI Grader</h1>
-    <p class="page-subtitle">
-        An intelligent automated grading platform using RAG, AI validation, and OS concurrency concepts.
-    </p>
-</div>
-
-<div class="grid-2 section">
-    <div class="card">
-        <h2 class="section-title">For teachers</h2>
-        <ul class="plain-list">
-            <li>Create question sets</li>
-            <li>Upload study materials (PDF, DOCX, TXT)</li>
-            <li>Grant access to students</li>
-            <li>View detailed analytics</li>
-        </ul>
-        <div class="form-actions">
-            <a href="{{ url_for('auth.teacher_signup') }}" class="btn btn--primary">Sign up as teacher</a>
-        </div>
+<div class="home-container">
+    <div class="card card--spacious card--centered">
+        <span class="eyebrow">Automated assessment</span>
+        <h1 class="page-title">Welcome to AI Grader</h1>
+        <p class="page-subtitle">
+            An intelligent automated grading platform using RAG, AI validation, and OS concurrency concepts.
+        </p>
+        {% if current_user.is_authenticated %}
+            <div class="form-actions">
+                <a href="{% if current_user.role == 'teacher' %}{{ url_for('teacher.dashboard') }}{% else %}{{ url_for('student.dashboard') }}{% endif %}"
+                    class="btn btn--primary">Go to dashboard</a>
+            </div>
+        {% endif %}
     </div>
 
-    <div class="card">
-        <h2 class="section-title">For students</h2>
-        <ul class="plain-list">
-            <li>Access assigned question sets</li>
-            <li>Submit answers with AI validation</li>
-            <li>Get instant feedback and scores</li>
-            <li>Track submission history</li>
-        </ul>
-        <div class="form-actions">
-            <a href="{{ url_for('auth.signup') }}" class="btn btn--outline">Sign up as student</a>
+    <div class="grid-2 section">
+        <div class="card">
+            <h2 class="section-title">For teachers</h2>
+            <ul class="plain-list">
+                <li>Create question sets</li>
+                <li>Upload study materials (PDF, DOCX, TXT)</li>
+                <li>Grant access to students</li>
+                <li>View detailed analytics</li>
+            </ul>
+            {% if not current_user.is_authenticated %}
+                <div class="form-actions">
+                    <a href="{{ url_for('auth.teacher_signup') }}" class="btn btn--primary">Sign up as teacher</a>
+                </div>
+            {% endif %}
         </div>
-    </div>
-</div>
 
-<div class="card section">
-    <h2 class="section-title">System features</h2>
-    <div class="feature-grid">
-        <div>
-            <h3 class="feature-title">AI validation</h3>
-            <p class="feature-text">Uses Claude API for intelligent answer grading</p>
-        </div>
-        <div>
-            <h3 class="feature-title">RAG-based</h3>
-            <p class="feature-text">Validates against teacher materials using TF-IDF</p>
-        </div>
-        <div>
-            <h3 class="feature-title">Threading</h3>
-            <p class="feature-text">Thread pool and locks for concurrent processing</p>
+        <div class="card">
+            <h2 class="section-title">For students</h2>
+            <ul class="plain-list">
+                <li>Access assigned question sets</li>
+                <li>Submit answers with AI validation</li>
+                <li>Get instant feedback and scores</li>
+                <li>Track submission history</li>
+            </ul>
+            {% if not current_user.is_authenticated %}
+                <div class="form-actions">
+                    <a href="{{ url_for('auth.signup') }}" class="btn btn--outline">Sign up as student</a>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>

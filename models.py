@@ -33,6 +33,12 @@ class Set(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # How students may use the uploaded materials during an attempt:
+    # 'open_book'  -> visible while they answer
+    # 'closed_book' -> visible only before the attempt is started
+    book_mode = db.Column(db.String(20), default='open_book')
+    # Minutes allowed per attempt; NULL means no time limit
+    time_limit_minutes = db.Column(db.Integer)
     
     # Relationships
     materials = db.relationship('Material', backref='set', lazy=True, cascade='all, delete-orphan')
@@ -73,6 +79,9 @@ class AccessGrant(db.Model):
     max_attempts = db.Column(db.Integer, default=1)
     attempts_used = db.Column(db.Integer, default=0)
     granted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Window for the attempt currently in progress; both NULL when no attempt is open
+    attempt_started_at = db.Column(db.DateTime)
+    attempt_deadline = db.Column(db.DateTime)
     
     __table_args__ = (db.UniqueConstraint('student_id', 'set_id', name='unique_student_set'),)
 
@@ -90,4 +99,5 @@ class Log(db.Model):
     confidence = db.Column(db.Float)
     manually_graded = db.Column(db.Boolean, default=False)  # True when a teacher overrides the AI score
     teacher_comment = db.Column(db.Text)  # Teacher's optional note on manual correction
+    submitted_late = db.Column(db.Boolean, default=False)  # Arrived after the set's time limit expired
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)

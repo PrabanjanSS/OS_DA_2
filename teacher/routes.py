@@ -29,8 +29,24 @@ def create_set():
     if request.method == 'POST':
         title = request.form.get('title')
         description = request.form.get('description')
-        
-        new_set = Set(teacher_id=current_user.id, title=title, description=description)
+
+        # Open book keeps the materials visible while the student answers;
+        # closed book shows them only before the attempt is started.
+        book_mode = request.form.get('book_mode', 'open_book')
+        if book_mode not in ('open_book', 'closed_book'):
+            book_mode = 'open_book'
+
+        # Blank or 0 means no time limit; otherwise clamped to a sane range
+        raw_limit = (request.form.get('time_limit_minutes') or '').strip()
+        try:
+            time_limit_minutes = int(raw_limit) if raw_limit else None
+        except ValueError:
+            time_limit_minutes = None
+        if time_limit_minutes is not None:
+            time_limit_minutes = min(max(time_limit_minutes, 1), 600)
+
+        new_set = Set(teacher_id=current_user.id, title=title, description=description,
+                      book_mode=book_mode, time_limit_minutes=time_limit_minutes)
         db.session.add(new_set)
         db.session.commit()
         

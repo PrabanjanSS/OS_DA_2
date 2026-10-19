@@ -85,6 +85,9 @@
                         <div class="row row--wrap">
                             <span class="badge badge--plain">{{ log.source_used|replace('_', ' ') }}</span>
                             <span class="meta meta--plain">Confidence: {{ "%.2f"|format(log.confidence) }}</span>
+                            {% if log.submitted_late %}
+                                <span class="badge badge--plain">Late submission</span>
+                            {% endif %}
                         </div>
 
                         {% if log.teacher_comment %}

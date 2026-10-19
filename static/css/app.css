@@ -986,3 +986,89 @@ hr {
         padding: var(--space-6) var(--space-4);
     }
 }
+
+/* Home Hero refinement */
+body.page-home .card--spacious {
+    padding: var(--space-8) var(--space-6);
+    margin-top: var(--space-6);
+}
+
+body.page-home .page-title {
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-4);
+}
+
+body.page-home .page-subtitle {
+    font-size: var(--text-md);
+    max-width: 50ch;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+body.page-home .eyebrow {
+    color: var(--color-accent);
+    letter-spacing: 0.15em;
+    margin-bottom: var(--space-2);
+}
+/* Only the landing page carries a photographic backdrop. Headings and body
+   copy all sit on opaque .card surfaces, so no scrim is needed for contrast.
+   Add a `linear-gradient(rgba(246,244,239,0.55), rgba(246,244,239,0.55)),`
+   layer above the url() if the photo ever competes with the content. */
+
+body.page-home {
+    background-color: var(--color-bg);
+    background-image: url("../img/image-from-rawpixel-id-2349821-jpeg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+body.page-home .home-container {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 60vh;
+}
+
+body.page-home .site-main {
+    padding-top: var(--space-4);
+    display: flex;
+    align-items: center;
+}
+
+/* On the home page, make the header semi-transparent with a blur effect
+   to maintain visibility of the brand and links against the background. */
+body.page-home .site-header {
+    background: rgba(246, 244, 239, 0.7); /* Light paper tint */
+    backdrop-filter: blur(8px); /* Modern frosted glass effect */
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: var(--border-width) solid rgba(217, 212, 200, 0.3);
+}
+
+body.page-home .brand,
+body.page-home .nav-link {
+    color: var(--color-ink);
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5); /* Subtle lift for contrast */
+}
+
+body.page-home .site-footer {
+    background: rgba(246, 244, 239, 0.4);
+    border-top: var(--border-width) solid rgba(217, 212, 200, 0.2);
+}
+
+/* Make cards semi-transparent to let the background texture bleed through slightly,
+   creating a "paper on paper" effect without heavy solid white blocks. */
+body.page-home .card {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: var(--color-border-strong);
+    box-shadow: 0 4px 12px rgba(26, 26, 23, 0.03); /* Softer, wider shadow */
+}
+
+/* Ensure secondary cards (panels) also follow this theme if used */
+body.page-home .panel {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: var(--color-border-strong);
+}

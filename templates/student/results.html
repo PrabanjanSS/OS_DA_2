@@ -18,6 +18,13 @@
     <div class="score-hero-caption">{{ "%.1f"|format((total_score / max_total) * 100) }}%</div>
 </div>
 
+{% if submitted_late %}
+    <div class="alert alert--info section">
+        This submission arrived after the time limit for the set. It was graded in full and
+        marked as late for your teacher.
+    </div>
+{% endif %}
+
 <div class="stack stack--lg section">
     {% for result in results %}
         <div class="card">

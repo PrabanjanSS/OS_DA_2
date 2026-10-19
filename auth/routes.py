@@ -119,6 +119,9 @@ def login():
 
         if user and user.check_password(password):
             login_user(user)
+            # Mark the session permanent so PERMANENT_SESSION_LIFETIME applies
+            # and an idle user is logged out after SESSION_TIMEOUT_MINUTES.
+            session.permanent = True
             flash(f'Welcome back, {user.name}!', 'success')
 
             # Redirect based on role

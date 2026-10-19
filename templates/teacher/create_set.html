@@ -24,6 +24,27 @@
                     placeholder="Brief description of this question set..."></textarea>
             </div>
 
+            <div class="field">
+                <label class="field-label" for="book-mode">Material access</label>
+                <select id="book-mode" name="book_mode" class="select">
+                    <option value="open_book" selected>Open book &ndash; materials visible while answering</option>
+                    <option value="closed_book">Closed book &ndash; materials shown before the attempt only</option>
+                </select>
+                <span class="field-hint">
+                    Open book lets students keep the uploaded materials open beside the questions.
+                </span>
+            </div>
+
+            <div class="field">
+                <label class="field-label" for="time-limit">Attempt time limit in minutes</label>
+                <input type="number" id="time-limit" name="time_limit_minutes" class="input input--narrow"
+                    min="1" max="600" placeholder="No limit">
+                <span class="field-hint">
+                    Leave blank for no limit. An answer submitted after the limit is still graded,
+                    but is flagged as late.
+                </span>
+            </div>
+
             <div class="form-actions">
                 <button type="submit" class="btn btn--primary btn--block">Create set</button>
             </div>

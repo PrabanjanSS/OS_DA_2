@@ -11,7 +11,9 @@
         <h1 class="page-title">{{ set.title }}</h1>
         <p class="page-subtitle">{{ set.description or 'No description' }}</p>
     </div>
-    <div class="page-head__action">
+    <div class="page-head__action row row--tight">
+        <span class="badge badge--plain">{{ 'Open book' if (set.book_mode or 'open_book') == 'open_book' else 'Closed book' }}</span>
+        <span class="meta meta--plain nowrap">{{ (set.time_limit_minutes ~ ' min limit') if set.time_limit_minutes else 'No time limit' }}</span>
         <form method="POST" action="{{ url_for('teacher.delete_set', set_id=set.id) }}"
             data-confirm="Delete this set permanently? Its questions, materials and student submissions will be removed.">
             <button type="submit" class="btn btn--danger nowrap">Delete set</button>
