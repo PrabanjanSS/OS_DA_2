@@ -53,8 +53,18 @@
         <h2 class="section-title">Grant student access</h2>
         <form method="POST" action="{{ url_for('teacher.grant_access', set_id=set.id) }}">
             <div class="field">
-                <label class="field-label" for="student-email">Student email</label>
-                <input type="text" id="student-email" name="student_email" class="input" inputmode="email" required
+                <label class="field-label" for="class-group">Grant to a class</label>
+                <select id="class-group" name="class_group_id" class="select">
+                    <option value="">&mdash; Single student (use the email below) &mdash;</option>
+                    {% for group in classes %}
+                        <option value="{{ group.id }}">{{ group.name }} ({{ group.members|length }} students)</option>
+                    {% endfor %}
+                </select>
+                <span class="field-hint">Granting a class gives every one of its students access in one step.</span>
+            </div>
+            <div class="field">
+                <label class="field-label" for="student-email">Or a single student email</label>
+                <input type="text" id="student-email" name="student_email" class="input" inputmode="email"
                     placeholder="student@email.com">
             </div>
             <div class="field">
@@ -67,6 +77,10 @@
             </div>
         </form>
 
+        {% if not classes %}
+            <p class="text-muted text-small">No classes yet. <a href="{{ url_for('teacher.classes') }}">Create one</a> to grant a whole slot at once.</p>
+        {% endif %}
+
         {% if access_grants %}
             <div class="item-list">
                 {% for grant in access_grants %}
@@ -78,6 +92,109 @@
             </div>
         {% endif %}
     </div>
+</div>
+
+<!-- Download marks for this assignment -->
+<div class="card section">
+    <div class="section-head">
+        <h2 class="section-title">Download marks for this assignment</h2>
+        <span class="badge badge--plain nowrap">Detailed sheet</span>
+    </div>
+    <p class="text-muted text-small">
+        One row per answer: student details, their response, the AI's key point and full reasoning,
+        score and which validation source graded it. Pick the class whose marks you want.
+    </p>
+    <form method="GET" action="{{ url_for('teacher.export_detailed', set_id=set.id) }}" class="form-inline">
+        <div class="field field--grow">
+            <label class="field-label" for="export-class">Class</label>
+            <select id="export-class" name="class_group_id" class="select" required>
+                <option value="all">All classes</option>
+                {% for group in classes %}
+                    <option value="{{ group.id }}">{{ group.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn btn--outline">Download Excel</button>
+    </form>
+</div>
+
+<!-- AI question pool -->
+<div class="card section">
+    <div class="section-head">
+        <h2 class="section-title">AI question pool</h2>
+        {% if set.is_pool_based %}
+            <span class="badge badge--accent nowrap">Random allocation on</span>
+        {% else %}
+            <span class="badge badge--plain nowrap">Off</span>
+        {% endif %}
+    </div>
+
+    {% if set.is_pool_based %}
+        <p class="text-muted text-small">
+            Topic: <strong>{{ set.pool_topic }}</strong> &middot;
+            {{ set.questions_per_student }} questions per student &middot;
+            Difficulty: {{ difficulty_labels.get(set.pool_difficulty or 3, 'Balanced') }}.
+            Each student is handed a different, randomly ordered draw from the pool when they start.
+        </p>
+    {% else %}
+        <p class="text-muted text-small">
+            Give a topic and the AI will write a small pool of questions. Students then each receive a
+            random, differently ordered draw from it, so no two papers look alike at the same time.
+        </p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('teacher.generate_questions', set_id=set.id) }}">
+        <div class="field">
+            <label class="field-label" for="pool-topic">Topic</label>
+            <input type="text" id="pool-topic" name="topic" class="input" required
+                placeholder="CPU scheduling algorithms" value="{{ set.pool_topic or '' }}">
+        </div>
+        <div class="grid-3">
+            <div class="field">
+                <label class="field-label" for="questions-per-student">Questions per student</label>
+                <input type="number" id="questions-per-student" name="questions_per_student"
+                    class="input input--narrow" value="{{ set.questions_per_student or 3 }}" min="1" max="5">
+            </div>
+            <div class="field">
+                <label class="field-label" for="difficulty">Hardness</label>
+                <select id="difficulty" name="difficulty" class="select">
+                    {% for level, level_label in difficulty_labels.items() %}
+                        <option value="{{ level }}" {% if level == (set.pool_difficulty or 3) %}selected{% endif %}>
+                            {{ level }} &ndash; {{ level_label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label class="field-label" for="pool-size">Pool size</label>
+                <input type="number" id="pool-size" name="pool_size" class="input input--narrow"
+                    value="{{ (set.questions_per_student or 3) * 3 }}" min="1" max="30">
+                <span class="field-hint">A larger pool means fewer repeated questions.</span>
+            </div>
+        </div>
+        <div class="field">
+            <label class="field-label" for="pool-notes">Notes for the AI (optional)</label>
+            <textarea id="pool-notes" name="pool_notes" class="textarea" rows="2"
+                placeholder="Focus on numerical problems, avoid definitions, cover round-robin and SJF...">{{ set.pool_notes or '' }}</textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn--primary">
+                {{ 'Regenerate pool' if set.is_pool_based else 'Generate questions' }}
+            </button>
+        </div>
+    </form>
+
+    {% if set.is_pool_based %}
+        <div class="row row--tight">
+            <form method="POST" action="{{ url_for('teacher.disable_pool', set_id=set.id) }}">
+                <button type="submit" class="btn btn--sm">Switch off random allocation</button>
+            </form>
+            <form method="POST" action="{{ url_for('teacher.clear_pool', set_id=set.id) }}"
+                data-confirm="Delete all generated questions and their allocations? Submitted answers keep the questions they already used.">
+                <button type="submit" class="btn btn--sm btn--danger">Clear pool</button>
+            </form>
+        </div>
+    {% endif %}
 </div>
 
 <!-- Add Question -->
@@ -131,6 +248,9 @@
                     <div class="question-meta">
                         <span>Max score: {{ question.max_score }}</span>
                         <span>Strictness: {{ strictness_labels.get(question.strictness or 3, 'Balanced') }}</span>
+                        {% if question.is_generated %}
+                            <span>AI generated{% if question.difficulty %} &middot; {{ difficulty_labels.get(question.difficulty, '') }}{% endif %}</span>
+                        {% endif %}
                         {% if question.ideal_answer %}
                             <span>Reference answer provided</span>
                         {% endif %}

@@ -5,6 +5,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 from flask_login import login_required, current_user
 from models import Set, Question, Material, AccessGrant, Log
 from extensions import db
+from services.allocation import allocate_questions, allocated_questions
 from services.validator import AnswerValidator
 from services.concurrency import attempt_counter, log_submission
 
@@ -12,9 +13,29 @@ student_bp = Blueprint('student', __name__)
 
 
 def _requires_start(set_obj):
-    """A timed set or a closed-book set needs an explicit start before answering."""
+    """A timed, closed-book or pool-based set needs an explicit start.
+
+    Pool-based sets need one because the questions are handed out at that
+    moment; showing the answer form first would mean showing an empty paper.
+    """
     closed_book = (set_obj.book_mode or 'open_book') == 'closed_book'
-    return closed_book or set_obj.time_limit_minutes is not None
+    return closed_book or set_obj.time_limit_minutes is not None or bool(set_obj.is_pool_based)
+
+
+def _questions_for_attempt(set_obj, grant, started):
+    """The questions this student should be looking at right now."""
+    if not set_obj.is_pool_based:
+        return Question.query.filter_by(set_id=set_obj.id).all()
+
+    if not started:
+        return []
+    attempt_no = grant.attempts_used + 1
+    questions = allocated_questions(current_user.id, set_obj.id, attempt_no)
+    if not questions:
+        # An attempt started before the pool existed, or an allocation was
+        # cleared: hand one out now rather than showing an empty paper.
+        questions = allocate_questions(set_obj, current_user.id, attempt_no)
+    return questions
 
 @student_bp.route('/dashboard')
 @login_required
@@ -58,10 +79,10 @@ def view_set(set_id):
         return redirect(url_for('student.dashboard'))
     
     set_obj = Set.query.get_or_404(set_id)
-    questions = Question.query.filter_by(set_id=set_id).all()
 
     closed_book = (set_obj.book_mode or 'open_book') == 'closed_book'
     started = grant.attempt_started_at is not None
+    questions = _questions_for_attempt(set_obj, grant, started)
     awaiting_start = _requires_start(set_obj) and not started
     # Closed book: the materials are readable up to the moment the attempt
     # starts, then they are withdrawn from the page entirely.
@@ -73,6 +94,7 @@ def view_set(set_id):
                           awaiting_start=awaiting_start,
                           closed_book=closed_book,
                           show_materials=show_materials,
+                          pool_based=bool(set_obj.is_pool_based),
                           time_limit_minutes=set_obj.time_limit_minutes,
                           attempt_deadline=grant.attempt_deadline)
 
@@ -95,15 +117,23 @@ def start_attempt(set_id):
 
     set_obj = Set.query.get_or_404(set_id)
 
-    # Starting the attempt is what begins the clock and, for a closed-book set,
-    # what withdraws the materials from the student's view.
+    # Starting the attempt is what begins the clock, what withdraws the
+    # materials from a closed-book student's view, and - for a pool-based set -
+    # what hands out this student's questions.
     now = datetime.utcnow()
     grant.attempt_started_at = now
     grant.attempt_deadline = (now + timedelta(minutes=set_obj.time_limit_minutes)
                               if set_obj.time_limit_minutes else None)
     db.session.commit()
 
-    if set_obj.time_limit_minutes:
+    # attempts_used still counts completed attempts, so the one starting now is
+    # the next number up.
+    allocated = _questions_for_attempt(set_obj, grant, started=True)
+
+    if set_obj.is_pool_based:
+        flash(f'Attempt started. You have been given {len(allocated)} questions '
+              f'drawn at random from the pool.', 'success')
+    elif set_obj.time_limit_minutes:
         flash(f'Attempt started. You have {set_obj.time_limit_minutes} minutes.', 'success')
     else:
         flash('Attempt started.', 'success')
@@ -168,7 +198,15 @@ def submit_answer(set_id):
         flash('No attempts remaining or access denied.', 'error')
         return redirect(url_for('student.dashboard'))
     
-    questions = Question.query.filter_by(set_id=set_id).all()
+    # A pool-based paper is the allocation handed out at start, not the whole
+    # pool. Grading every pool question would also read answers for questions
+    # this student was never shown.
+    if set_obj.is_pool_based:
+        questions = allocated_questions(current_user.id, set_id, grant.attempts_used)
+        if not questions:
+            questions = allocate_questions(set_obj, current_user.id, grant.attempts_used)
+    else:
+        questions = Question.query.filter_by(set_id=set_id).all()
 
     # An answer that arrives after the deadline is still graded; it is recorded
     # as late so the teacher can see the limit was overrun.
@@ -206,7 +244,9 @@ def submit_answer(set_id):
                 max_score=validation_result['max_score'],
                 source_used=validation_result['source_used'],
                 confidence=validation_result['confidence'],
-                submitted_late=submitted_late
+                submitted_late=submitted_late,
+                key_point=validation_result.get('key_point'),
+                attempt_no=grant.attempts_used
             )
             db.session.add(log)
             db.session.commit()

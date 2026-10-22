@@ -24,7 +24,14 @@
                         <p class="text-muted text-small">{{ item.set.description or 'No description' }}</p>
                     </div>
 
-                    <p class="meta">{{ item.set.questions|length }} questions &middot; {{ item.set.materials|length }} materials</p>
+                    <p class="meta">
+                        {% if item.set.is_pool_based %}
+                            {{ item.set.questions_per_student }} random of {{ item.set.questions|length }} questions
+                        {% else %}
+                            {{ item.set.questions|length }} questions
+                        {% endif %}
+                        &middot; {{ item.set.materials|length }} materials
+                    </p>
 
                     <div class="row row--between">
                         <span class="text-small text-muted">Attempts: {{ item.attempts_used }}/{{ item.max_attempts }}</span>

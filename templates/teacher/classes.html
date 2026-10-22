@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Classes{% endblock %}
+
+{% block content %}
+<a href="{{ url_for('teacher.dashboard') }}" class="breadcrumb">Back to dashboard</a>
+
+<div class="page-head">
+    <div class="page-head__text">
+        <span class="eyebrow">Classes</span>
+        <h1 class="page-title">Class groups</h1>
+        <p class="page-subtitle">Group students once, then grant a whole slot access to a set in one step.</p>
+    </div>
+</div>
+
+<div class="card section">
+    <h2 class="section-title">Create a class</h2>
+    <form method="POST" action="{{ url_for('teacher.create_class') }}">
+        <div class="grid-2">
+            <div class="field">
+                <label class="field-label" for="class-name">Class name</label>
+                <input type="text" id="class-name" name="name" class="input" required
+                    placeholder="E1">
+                <span class="field-hint">Short slot code or group name, e.g. E1, E2.</span>
+            </div>
+            <div class="field">
+                <label class="field-label" for="class-description">Description (optional)</label>
+                <input type="text" id="class-description" name="description" class="input"
+                    placeholder="OS slot E1 - Tuesday morning batch">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn--primary">Create class</button>
+        </div>
+    </form>
+</div>
+
+{% if classes %}
+    <div class="stack stack--lg section">
+        {% for group in classes %}
+            <div class="card">
+                <div class="section-head">
+                    <div>
+                        <h2 class="section-title">{{ group.name }}</h2>
+                        <p class="text-muted text-small">{{ group.description or 'No description' }}</p>
+                    </div>
+                    <span class="badge badge--plain nowrap">{{ group.members|length }} students</span>
+                </div>
+
+                {% if group.members %}
+                    <div class="item-list">
+                        {% for student in group.members %}
+                            <div class="item">
+                                <div class="row row--tight">
+                                    <span class="item-name">{{ student.name }}</span>
+                                    <span class="item-meta item-meta--plain">{{ student.email }}</span>
+                                </div>
+                                <form method="POST" action="{{ url_for('teacher.remove_class_member', class_id=group.id) }}"
+                                    data-confirm="Remove {{ student.name }} from {{ group.name }}? Access already granted for a set is not withdrawn.">
+                                    <input type="hidden" name="student_id" value="{{ student.id }}">
+                                    <button type="submit" class="btn btn--sm btn--danger nowrap">Remove</button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted text-small">No students in this class yet.</p>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('teacher.add_class_member', class_id=group.id) }}" class="form-inline">
+                    <div class="field field--grow">
+                        <label class="field-label" for="member-{{ group.id }}">Add student by email</label>
+                        <input type="text" id="member-{{ group.id }}" name="student_email" class="input"
+                            inputmode="email" required placeholder="student@email.com">
+                    </div>
+                    <button type="submit" class="btn btn--outline">Add to class</button>
+                </form>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty">
+        <h3 class="empty-title">No classes yet</h3>
+        <p class="empty-text">Create a class above, add its students, then grant the class access to a set.</p>
+    </div>
+{% endif %}
+{% endblock %}

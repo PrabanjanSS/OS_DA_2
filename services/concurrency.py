@@ -9,6 +9,10 @@ executor = ThreadPoolExecutor(max_workers=4)
 # Locks for critical sections (mutual exclusion)
 attempt_lock = threading.Lock()
 log_lock = threading.Lock()
+# Guards question-pool allocation: the "who already has what" read and the
+# "write my allocation" step must not interleave, or two students starting at
+# the same moment could be handed the same questions.
+allocation_lock = threading.Lock()
 
 def run_in_thread(func: Callable, *args, **kwargs) -> Any:
     """

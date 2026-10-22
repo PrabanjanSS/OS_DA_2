@@ -585,6 +585,16 @@ hr {
     min-width: calc(var(--space-8) * 3);
 }
 
+/* Labelled checkbox line, e.g. picking which assignments to include */
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--color-ink);
+    cursor: pointer;
+}
+
 /* --- Alerts (flash messages) -------------------------------------------- */
 
 .alert {

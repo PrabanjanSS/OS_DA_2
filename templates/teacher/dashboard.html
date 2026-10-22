@@ -44,4 +44,53 @@
         <a href="{{ url_for('teacher.create_set') }}" class="btn btn--primary">Create your first set</a>
     </div>
 {% endif %}
+
+{% if sets %}
+<div class="card section">
+    <div class="section-head">
+        <div>
+            <h2 class="section-title">Download a class mark sheet</h2>
+            <p class="text-muted text-small">
+                One row per student, one column per assignment: a register of every class member's marks
+                across the selected DAs, plus a total and percentage.
+            </p>
+        </div>
+        <span class="badge badge--plain nowrap">Mark sheet</span>
+    </div>
+
+    {% if classes %}
+        <form method="GET" action="{{ url_for('teacher.export_marksheet') }}">
+            <div class="field">
+                <label class="field-label" for="marksheet-class">Class</label>
+                <select id="marksheet-class" name="class_group_id" class="select" required>
+                    {% for group in classes %}
+                        <option value="{{ group.id }}">{{ group.name }} ({{ group.members|length }} students)</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="field">
+                <span class="field-label">Assignments to include</span>
+                <div class="stack">
+                    {% for set in sets %}
+                        <label class="checkbox-row">
+                            <input type="checkbox" name="set_ids" value="{{ set.id }}" checked>
+                            <span>{{ set.title }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+                <span class="field-hint">Leave all ticked to include every assignment.</span>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn--outline">Download mark sheet</button>
+            </div>
+        </form>
+    {% else %}
+        <p class="text-muted text-small">
+            No classes yet. <a href="{{ url_for('teacher.classes') }}">Create a class</a> and add students to export a mark sheet.
+        </p>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}

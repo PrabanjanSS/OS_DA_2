@@ -33,6 +33,29 @@ def strictness_profile(strictness) -> tuple:
     return STRICTNESS_LEVELS[level]
 
 
+def _clip(text: str, limit: int = 120) -> str:
+    text = ' '.join((text or '').split())
+    if len(text) <= limit:
+        return text
+    return text[:limit].rsplit(' ', 1)[0] + '...'
+
+
+def fallback_key_point(answer: str) -> str:
+    """One-line gist for the non-AI paths.
+
+    There is no language model on these paths, so the leading sentence of the
+    student's own answer stands in rather than an invented summary.
+    """
+    text = ' '.join((answer or '').split())
+    if not text:
+        return ''
+    for stop in ('. ', '? ', '! '):
+        idx = text.find(stop)
+        if idx != -1:
+            return _clip(text[:idx + 1])
+    return _clip(text)
+
+
 class AnswerValidator:
     """
     Validation chain: Materials → AI API → Fallback Dataset
@@ -74,6 +97,7 @@ class AnswerValidator:
             'max_score': int,
             'correct': bool,
             'explanation': str,
+            'key_point': str,
             'confidence': float,
             'source_used': str
         }
@@ -136,6 +160,7 @@ class AnswerValidator:
             'correct': score >= Config.MAX_SCORE * threshold,
             'explanation': f"Answer validated against teacher materials ({label} strictness). "
                            f"Similarity: {similarity_score:.2f} (boosted: {boosted_score:.2f})",
+            'key_point': fallback_key_point(answer),
             'confidence': similarity_score,
             'source_used': 'material_match'
         }
@@ -182,6 +207,7 @@ Respond ONLY with a JSON object in this exact format:
     "score": <number 0-10>,
     "correct": <boolean>,
     "explanation": "<brief explanation of why the answer received this score>",
+    "key_point": "<at most 12 words naming the main point the student actually made>",
     "confidence": <number 0-1>
 }
 """
@@ -206,6 +232,8 @@ Respond ONLY with a JSON object in this exact format:
                 'max_score': Config.MAX_SCORE,
                 'correct': result.get('correct', False),
                 'explanation': result.get('explanation', ''),
+                # Older or truncated responses may omit it; never leave the column blank.
+                'key_point': _clip(result.get('key_point') or '') or fallback_key_point(answer),
                 'confidence': result.get('confidence', 0.5),
                 'source_used': 'ai_api'
             }
@@ -285,6 +313,7 @@ Respond ONLY with a JSON object in this exact format:
             'correct': score >= Config.MAX_SCORE * threshold,
             'explanation': f'Validated using local similarity matching ({label} strictness, '
                            f'fallback mode). Similarity: {similarity:.2f}',
+            'key_point': fallback_key_point(answer),
             'confidence': boosted_similarity,
             'source_used': 'fallback_dataset'
         }

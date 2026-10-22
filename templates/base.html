@@ -21,8 +21,11 @@
                         {% set section = current_user.role %}
                         {% if section == 'teacher' %}
                             <a href="{{ url_for('teacher.dashboard') }}"
-                               class="nav-link{% if request.blueprint == 'teacher' %} nav-link--active{% endif %}"
-                               {% if request.blueprint == 'teacher' %}aria-current="page"{% endif %}>Dashboard</a>
+                               class="nav-link{% if request.endpoint == 'teacher.dashboard' %} nav-link--active{% endif %}"
+                               {% if request.endpoint == 'teacher.dashboard' %}aria-current="page"{% endif %}>Dashboard</a>
+                            <a href="{{ url_for('teacher.classes') }}"
+                               class="nav-link{% if request.endpoint == 'teacher.classes' %} nav-link--active{% endif %}"
+                               {% if request.endpoint == 'teacher.classes' %}aria-current="page"{% endif %}>Classes</a>
                         {% else %}
                             <a href="{{ url_for('student.dashboard') }}"
                                class="nav-link{% if request.blueprint == 'student' %} nav-link--active{% endif %}"

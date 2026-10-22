@@ -14,6 +14,9 @@
     <div class="page-head__action row row--tight">
         <span class="badge badge--accent">{{ remaining_attempts }} attempts remaining</span>
         <span class="badge badge--plain">{{ 'Closed book' if closed_book else 'Open book' }}</span>
+        {% if pool_based %}
+            <span class="badge badge--plain">Random questions</span>
+        {% endif %}
         <span class="meta meta--plain nowrap">{{ (time_limit_minutes ~ ' min limit') if time_limit_minutes else 'No time limit' }}</span>
         <span class="meta meta--plain nowrap">{{ questions|length }} questions</span>
     </div>
@@ -23,9 +26,12 @@
     <!-- The attempt has not been started yet: materials are open, answers are not -->
     <div class="card card--padded section">
         <span class="eyebrow">Before you start</span>
-        <h2 class="section-title">{{ 'Closed book' if closed_book else 'Timed attempt' }}</h2>
+        <h2 class="section-title">{% if pool_based %}Random draw{% elif closed_book %}Closed book{% else %}Timed attempt{% endif %}</h2>
         <p class="text-muted text-small">
-            {% if closed_book %}
+            {% if pool_based %}
+                Your questions are drawn at random from the pool the moment you start, and only then are
+                they fixed. Students sitting together receive different questions in a different order.
+            {% elif closed_book %}
                 These materials are readable until you start. They close as soon as the attempt begins.
             {% else %}
                 The materials stay available beside the questions while you answer.
@@ -87,6 +93,12 @@
     {% endif %}
 
 <form method="POST" action="{{ url_for('student.submit_answer', set_id=set.id) }}" class="section">
+    {% if pool_based %}
+        <p class="meta meta--plain section">
+            These {{ questions|length }} questions were drawn at random from the pool for this attempt and are
+            fixed now &mdash; reloading the page will not change your paper.
+        </p>
+    {% endif %}
     <div class="stack stack--lg">
         {% for question in questions %}
             <div class="card">

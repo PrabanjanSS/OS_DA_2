@@ -15,17 +15,28 @@ NEW_COLUMNS = {
         'manually_graded': 'BOOLEAN DEFAULT 0',
         'teacher_comment': 'TEXT',
         'submitted_late': 'BOOLEAN DEFAULT 0',
+        'attempt_no': 'INTEGER DEFAULT 1',
+        'key_point': 'TEXT',
     },
     'questions': {
         'strictness': 'INTEGER DEFAULT 3',
+        'is_generated': 'BOOLEAN DEFAULT 0',
+        'topic': 'TEXT',
+        'difficulty': 'INTEGER',
     },
     'sets': {
         'book_mode': "TEXT DEFAULT 'open_book'",
         'time_limit_minutes': 'INTEGER',
+        'is_pool_based': 'BOOLEAN DEFAULT 0',
+        'questions_per_student': 'INTEGER',
+        'pool_topic': 'TEXT',
+        'pool_difficulty': 'INTEGER',
+        'pool_notes': 'TEXT',
     },
     'access_grants': {
         'attempt_started_at': 'DATETIME',
         'attempt_deadline': 'DATETIME',
+        'class_group_id': 'INTEGER',
     },
 }
 
