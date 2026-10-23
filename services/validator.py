@@ -70,8 +70,7 @@ class AnswerValidator:
         
         if Config.GEMINI_API_KEY:
             genai.configure(api_key=Config.GEMINI_API_KEY)
-            # Use gemini-2.5-flash which has better free tier availability
-            self.client = genai.GenerativeModel('models/gemini-2.5-flash')
+            self.client = genai.GenerativeModel(Config.GEMINI_MODEL)
     
     def index_set_materials(self, materials: List[str]):
         """

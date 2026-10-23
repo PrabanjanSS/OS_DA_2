@@ -7,7 +7,7 @@
     <div class="page-head__text">
         <span class="eyebrow">Dashboard</span>
         <h1 class="page-title">Your question sets</h1>
-        <p class="page-subtitle">Create sets, upload materials, grant access, and grade submissions.</p>
+        <p class="page-subtitle">Create sets, hand out questions, grant access, and grade what comes back.</p>
     </div>
     <div class="page-head__action">
         <a href="{{ url_for('teacher.create_set') }}" class="btn btn--primary">Create new set</a>
@@ -20,19 +20,32 @@
             <div class="card">
                 <div class="stack">
                     <div>
+                        <div class="row row--tight row--wrap">
+                            <span class="badge badge--plain">{{ 'Assignment' if set.delivery_mode == 'assignment' else 'Quiz' }}</span>
+                            {% if set.is_pool_based %}
+                                <span class="badge badge--accent">Random</span>
+                            {% endif %}
+                            {% if set.book_mode == 'closed_book' %}
+                                <span class="badge badge--plain">Closed book</span>
+                            {% endif %}
+                        </div>
                         <h3 class="section-title">{{ set.title }}</h3>
                         <p class="text-muted text-small">{{ set.description or 'No description' }}</p>
                     </div>
 
-                    <p class="meta">{{ set.questions|length }} questions &middot; {{ set.materials|length }} materials</p>
+                    <p class="meta">
+                        {{ set.questions|length }} questions &middot; {{ set.materials|length }} files
+                        &middot; {{ set.access_grants|length }} granted
+                    </p>
 
-                    <div class="row row--tight">
-                        <a href="{{ url_for('teacher.view_set', set_id=set.id) }}" class="btn btn--primary">View set</a>
-                        <form method="POST" action="{{ url_for('teacher.delete_set', set_id=set.id) }}"
-                            data-confirm="Delete this set permanently? Its questions, materials and student submissions will be removed.">
-                            <button type="submit" class="btn btn--danger" title="Delete this set">Delete</button>
-                        </form>
-                    </div>
+                    <p class="meta meta--plain">
+                        {% if set.due_at %}Due {{ set.due_at.strftime('%d %b, %H:%M') }}{% endif %}
+                        {% if set.due_at and set.submissions_close_at %} &middot; {% endif %}
+                        {% if set.submissions_close_at %}closes {{ set.submissions_close_at.strftime('%d %b, %H:%M') }}{% endif %}
+                        {% if not set.due_at and not set.submissions_close_at %}No deadline{% endif %}
+                    </p>
+
+                    <a href="{{ url_for('teacher.view_set', set_id=set.id) }}" class="btn btn--primary btn--block">Open set</a>
                 </div>
             </div>
         {% endfor %}
@@ -41,25 +54,24 @@
     <div class="empty">
         <h3 class="empty-title">No question sets yet</h3>
         <p class="empty-text">Create your first question set to get started.</p>
-        <a href="{{ url_for('teacher.create_set') }}" class="btn btn--primary">Create your first set</a>
     </div>
 {% endif %}
 
-{% if sets %}
+{% if sets and classes %}
 <div class="card section">
     <div class="section-head">
         <div>
-            <h2 class="section-title">Download a class mark sheet</h2>
+            <h2 class="section-title">Class mark sheet</h2>
             <p class="text-muted text-small">
-                One row per student, one column per assignment: a register of every class member's marks
-                across the selected DAs, plus a total and percentage.
+                One row per student, one column per assignment &mdash; a register of every class member's
+                marks across the selected sets, with a total and percentage.
             </p>
         </div>
-        <span class="badge badge--plain nowrap">Mark sheet</span>
+        <span class="badge badge--plain nowrap">Excel</span>
     </div>
 
-    {% if classes %}
-        <form method="GET" action="{{ url_for('teacher.export_marksheet') }}">
+    <form method="GET" action="{{ url_for('teacher.export_marksheet') }}">
+        <div class="grid-2">
             <div class="field">
                 <label class="field-label" for="marksheet-class">Class</label>
                 <select id="marksheet-class" name="class_group_id" class="select" required>
@@ -70,27 +82,25 @@
             </div>
 
             <div class="field">
-                <span class="field-label">Assignments to include</span>
                 <div class="stack">
-                    {% for set in sets %}
-                        <label class="checkbox-row">
-                            <input type="checkbox" name="set_ids" value="{{ set.id }}" checked>
-                            <span>{{ set.title }}</span>
-                        </label>
-                    {% endfor %}
+                    <span class="field-label">Assignments to include</span>
+                    <div class="stack checkbox-list">
+                        {% for set in sets %}
+                            <label class="checkbox-row">
+                                <input type="checkbox" name="set_ids" value="{{ set.id }}" checked>
+                                <span>{{ set.title }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                    <span class="field-hint">Leave all ticked to include every assignment.</span>
                 </div>
-                <span class="field-hint">Leave all ticked to include every assignment.</span>
             </div>
+        </div>
 
-            <div class="form-actions">
-                <button type="submit" class="btn btn--outline">Download mark sheet</button>
-            </div>
-        </form>
-    {% else %}
-        <p class="text-muted text-small">
-            No classes yet. <a href="{{ url_for('teacher.classes') }}">Create a class</a> and add students to export a mark sheet.
-        </p>
-    {% endif %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn--outline">Download mark sheet</button>
+        </div>
+    </form>
 </div>
 {% endif %}
 {% endblock %}

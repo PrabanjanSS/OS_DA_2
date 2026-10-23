@@ -17,6 +17,7 @@ NEW_COLUMNS = {
         'submitted_late': 'BOOLEAN DEFAULT 0',
         'attempt_no': 'INTEGER DEFAULT 1',
         'key_point': 'TEXT',
+        'submission_id': 'INTEGER',
     },
     'questions': {
         'strictness': 'INTEGER DEFAULT 3',
@@ -32,6 +33,14 @@ NEW_COLUMNS = {
         'pool_topic': 'TEXT',
         'pool_difficulty': 'INTEGER',
         'pool_notes': 'TEXT',
+        'delivery_mode': "TEXT DEFAULT 'quiz'",
+        'due_at': 'DATETIME',
+        'submissions_close_at': 'DATETIME',
+        'pool_kind': 'TEXT',
+    },
+    'materials': {
+        'kind': "TEXT DEFAULT 'material'",
+        'is_generated': 'BOOLEAN DEFAULT 0',
     },
     'access_grants': {
         'attempt_started_at': 'DATETIME',

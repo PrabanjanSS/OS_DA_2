@@ -19,7 +19,18 @@
         {% for item in accessible_sets %}
             <div class="card">
                 <div class="stack">
-                    <div>
+                    <div class="stack">
+                        <div class="row row--tight">
+                            <span class="badge badge--plain">{{ 'Assignment' if item.is_assignment else 'Quiz' }}</span>
+                            {% if item.set.is_pool_based %}
+                                <span class="badge badge--plain">Random questions</span>
+                            {% endif %}
+                            {% if not item.window_open %}
+                                <span class="badge badge--warn">Closed</span>
+                            {% elif item.is_overdue %}
+                                <span class="badge badge--warn">Past due</span>
+                            {% endif %}
+                        </div>
                         <h3 class="section-title">{{ item.set.title }}</h3>
                         <p class="text-muted text-small">{{ item.set.description or 'No description' }}</p>
                     </div>
@@ -33,15 +44,27 @@
                         &middot; {{ item.set.materials|length }} materials
                     </p>
 
+                    {% if item.window_open and item.set.due_at %}
+                        <p class="meta meta--plain">Due {{ item.set.due_at.strftime('%d %b, %H:%M') }}</p>
+                    {% elif not item.window_open and item.set.submissions_close_at %}
+                        <p class="meta meta--plain">Closed {{ item.set.submissions_close_at.strftime('%d %b, %H:%M') }}</p>
+                    {% else %}
+                        <p class="meta meta--plain">No due date</p>
+                    {% endif %}
+
                     <div class="row row--between">
                         <span class="text-small text-muted">Attempts: {{ item.attempts_used }}/{{ item.max_attempts }}</span>
                         <span class="text-small">{{ item.remaining }} remaining</span>
                     </div>
 
-                    {% if item.remaining > 0 %}
-                        <a href="{{ url_for('student.view_set', set_id=item.set.id) }}" class="btn btn--primary btn--block">Start attempt</a>
-                    {% else %}
+                    {% if item.remaining <= 0 %}
                         <button type="button" class="btn btn--block" disabled>No attempts left</button>
+                    {% elif not item.window_open %}
+                        <button type="button" class="btn btn--block" disabled>Submission link closed</button>
+                    {% else %}
+                        <a href="{{ url_for('student.view_set', set_id=item.set.id) }}" class="btn btn--primary btn--block">
+                            {{ 'Upload answer sheet' if item.is_assignment else 'Start attempt' }}
+                        </a>
                     {% endif %}
                 </div>
             </div>

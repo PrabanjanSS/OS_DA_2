@@ -20,8 +20,26 @@
 
 {% if submitted_late %}
     <div class="alert alert--info section">
-        This submission arrived after the time limit for the set. It was graded in full and
+        This submission arrived after the deadline for the set. It was graded in full and
         marked as late for your teacher.
+    </div>
+{% endif %}
+
+{% if from_sheet %}
+    <div class="card section">
+        <div class="section-head">
+            <h2 class="section-title">Your document</h2>
+            <span class="meta meta--plain">Graded per question</span>
+        </div>
+        <p class="text-muted text-small">
+            {{ split_note }} Your teacher can review the split and adjust any mark.
+        </p>
+        {% if unanswered %}
+            <p class="text-muted text-small section">
+                No answer could be located for {{ unanswered }} question{{ 's' if unanswered != 1 }}
+                in the document, so they were left unmarked.
+            </p>
+        {% endif %}
     </div>
 {% endif %}
 

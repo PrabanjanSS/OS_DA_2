@@ -326,6 +326,10 @@ hr {
     margin-bottom: 0;
 }
 
+.section-head .text-small {
+    margin-top: var(--space-1);
+}
+
 /* --- Stacks & grids ------------------------------------------------------ */
 
 .stack > * + * {
@@ -502,6 +506,11 @@ hr {
     margin-top: var(--space-4);
 }
 
+.grid-2 > .field,
+.grid-3 > .field {
+    margin-top: 0;
+}
+
 .field-label {
     display: block;
     margin-bottom: var(--space-2);
@@ -595,6 +604,13 @@ hr {
     cursor: pointer;
 }
 
+/* A long list of checkboxes is capped so the card keeps its shape. */
+.checkbox-list {
+    max-height: calc(var(--space-8) * 2.5);
+    overflow-y: auto;
+    padding-right: var(--space-2);
+}
+
 /* --- Alerts (flash messages) -------------------------------------------- */
 
 .alert {
@@ -650,6 +666,14 @@ hr {
     text-transform: none;
     letter-spacing: normal;
     background: transparent;
+}
+
+/* State, not attribute: overdue work, a closed link, a sheet awaiting review.
+   Kept visually distinct from the neutral attribute badges above. */
+.badge--warn {
+    background: var(--color-warn-soft);
+    border-color: var(--color-warn-soft);
+    color: var(--color-warn);
 }
 
 /* --- Stats --------------------------------------------------------------- */
@@ -775,6 +799,14 @@ hr {
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
     color: var(--color-muted);
+}
+
+/* A numbered paper: question on the left, its marks pinned right. */
+.question-list > li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
 }
 
 /* --- Scores -------------------------------------------------------------- */
@@ -953,7 +985,137 @@ hr {
     white-space: nowrap;
 }
 
+/* --- Tabs (workspace navigation) ---------------------------------------- */
+
+.tabs {
+    display: flex;
+    gap: var(--space-1);
+    border-bottom: var(--border-width) solid var(--color-border-strong);
+    margin-bottom: var(--space-6);
+    overflow-x: auto;
+}
+
+.tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border: 0;
+    border-bottom: calc(var(--border-width) * 2) solid transparent;
+    margin-bottom: calc(var(--border-width) * -1);
+    background: none;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-sm);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--color-muted);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.tab:hover {
+    color: var(--color-ink);
+}
+
+.tab[aria-selected="true"] {
+    color: var(--color-ink);
+    border-bottom-color: var(--color-accent);
+}
+
+.tab-count {
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-muted);
+}
+
+.tab-dot {
+    width: var(--space-2);
+    height: var(--space-2);
+    border-radius: var(--radius-circle);
+    background: var(--color-warn);
+}
+
+/* --- Choice cards (radio pickers) --------------------------------------- */
+
+.choice-grid {
+    display: grid;
+    gap: var(--space-3);
+}
+
+.choice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.choice:hover {
+    border-color: var(--color-ink);
+}
+
+.choice:has(input:checked) {
+    border-color: var(--color-accent);
+    background: var(--color-accent-soft);
+}
+
+.choice input {
+    flex-shrink: 0;
+    margin-top: calc(var(--space-1) / 2);
+    accent-color: var(--color-accent);
+}
+
+.choice > span {
+    display: block;
+    min-width: 0;
+}
+
+.choice-title {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-sm);
+    color: var(--color-ink);
+}
+
+.choice-text {
+    display: block;
+    margin-top: var(--space-1);
+    font-size: var(--text-xs);
+    line-height: var(--leading-xs);
+    color: var(--color-muted);
+}
+
+/* --- Danger zone -------------------------------------------------------- */
+
+.card--danger {
+    border-color: var(--color-danger);
+    background: var(--color-danger-soft);
+}
+
+.card--danger .section-title {
+    margin-bottom: var(--space-2);
+}
+
+/* A list sitting directly under a card title needs no extra top rule. */
+.item-list--flush {
+    border-top: 0;
+    margin-top: var(--space-2);
+}
+
 /* --- Responsive ---------------------------------------------------------- */
+
+@media (min-width: 640px) {
+    .choice-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
 
 @media (min-width: 768px) {
     .grid-2 {

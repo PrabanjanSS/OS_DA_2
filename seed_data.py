@@ -23,6 +23,7 @@ from datetime import datetime, timedelta
 from app import create_app
 from extensions import db
 from models import (AccessGrant, ClassGroup, Log, Question, Set, User)
+from teacher.routes import sync_question_paper
 from services.validator import AnswerValidator
 
 TEACHER_EMAIL = 'teacher_test@example.com'
@@ -59,11 +60,16 @@ STUDENTS = {
 }
 
 # Three assignments. Each question carries a model answer and a plausible student
-# response used to generate the sample marks.
+# response used to generate the sample marks. `delivery_mode` picks how the work
+# comes in ('quiz' = typed into the portal, 'assignment' = one uploaded sheet),
+# `due_in_days` is the soft deadline and `closes_in_days` the hard close.
 ASSIGNMENTS = [
     {
         'title': 'DA1 - Processes and Threads',
         'description': 'Assignment 1: process vs thread, context switching.',
+        'delivery_mode': 'quiz',
+        'due_in_days': 3,
+        'closes_in_days': 10,
         'questions': [
             ('Define a process and explain how it differs from a thread.',
              'A process is a program in execution with its own address space. A thread is a unit of execution '
@@ -85,6 +91,9 @@ ASSIGNMENTS = [
     {
         'title': 'DA2 - CPU Scheduling',
         'description': 'Assignment 2: scheduling algorithms and their trade-offs.',
+        'delivery_mode': 'quiz',
+        'due_in_days': None,
+        'closes_in_days': None,
         'questions': [
             ('Compare FCFS and Round Robin scheduling.',
              'FCFS runs processes to completion in arrival order and suffers the convoy effect. Round Robin '
@@ -104,7 +113,10 @@ ASSIGNMENTS = [
     },
     {
         'title': 'DA3 - Deadlocks and Synchronization',
-        'description': 'Assignment 3: deadlock conditions and mutual exclusion.',
+        'description': 'Assignment 3: deadlock conditions and mutual exclusion. Upload one written sheet.',
+        'delivery_mode': 'assignment',
+        'due_in_days': 5,
+        'closes_in_days': 14,
         'questions': [
             ('List the four necessary conditions for a deadlock.',
              'Mutual exclusion, hold and wait, no preemption, and circular wait.',
@@ -156,6 +168,21 @@ def get_or_create_class(teacher, name, description):
     return group, True
 
 
+def _apply_mode(set_obj, spec):
+    """Write the seeded delivery mode and deadlines onto a set.
+
+    `due_in_days` / `closes_in_days` are offsets from now: the soft due date
+    after which work is still accepted but flagged late, and the hard close after
+    which the link refuses everything. A `None` offset leaves that date unset.
+    """
+    set_obj.delivery_mode = spec['delivery_mode']
+    now = datetime.utcnow()
+    set_obj.due_at = now + timedelta(days=spec['due_in_days']) if spec['due_in_days'] else None
+    set_obj.submissions_close_at = (now + timedelta(days=spec['closes_in_days'])
+                                    if spec['closes_in_days'] else None)
+    db.session.commit()
+
+
 def seed(with_samples=True):
     teacher, teacher_created = get_or_create_user(TEACHER_NAME, TEACHER_EMAIL, 'teacher')
 
@@ -184,6 +211,14 @@ def seed(with_samples=True):
                 db.session.add(Question(set_id=set_obj.id, question_text=question_text,
                                         ideal_answer=ideal_answer, max_score=10, strictness=3))
             db.session.commit()
+
+        # The seeded sets are a fixture, so the mode and deadlines are re-applied
+        # on every run: a database seeded before these columns existed has to end
+        # up looking like a freshly seeded one.
+        _apply_mode(set_obj, spec)
+        # The paper students answer against is written from the questions, so a
+        # freshly seeded set is complete without opening it in the browser first.
+        sync_question_paper(set_obj)
         sets.append(set_obj)
 
         # Grant both slots access so every student can see the assignment.

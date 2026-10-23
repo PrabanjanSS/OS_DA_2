@@ -9,19 +9,40 @@
     <div class="card card--padded">
         <span class="eyebrow">New</span>
         <h1 class="title-md">Create question set</h1>
+        <p class="text-muted text-small">Pick the format first &mdash; the rest of the flow follows from it.</p>
         <hr class="divider">
 
         <form method="POST" action="{{ url_for('teacher.create_set') }}">
             <div class="field">
                 <label class="field-label" for="title">Set title</label>
                 <input type="text" id="title" name="title" class="input" required
-                    placeholder="e.g. Chapter 1 Quiz">
+                    placeholder="e.g. DA1 &ndash; Processes and Threads">
             </div>
 
             <div class="field">
                 <label class="field-label" for="description">Description (optional)</label>
-                <textarea id="description" name="description" class="textarea" rows="3"
-                    placeholder="Brief description of this question set..."></textarea>
+                <textarea id="description" name="description" class="textarea" rows="2"
+                    placeholder="What this set covers..."></textarea>
+            </div>
+
+            <div class="field">
+                <span class="field-label">Format</span>
+                <div class="choice-grid">
+                    <label class="choice">
+                        <input type="radio" name="delivery_mode" value="quiz" checked>
+                        <span>
+                            <span class="choice-title">Timed quiz</span>
+                            <span class="choice-text">Answers typed on screen, one box per question, inside the attempt clock.</span>
+                        </span>
+                    </label>
+                    <label class="choice">
+                        <input type="radio" name="delivery_mode" value="assignment">
+                        <span>
+                            <span class="choice-title">Assignment</span>
+                            <span class="choice-text">A Word or PDF answer sheet is uploaded before the deadline, then graded per question.</span>
+                        </span>
+                    </label>
+                </div>
             </div>
 
             <div class="field">
@@ -30,19 +51,33 @@
                     <option value="open_book" selected>Open book &ndash; materials visible while answering</option>
                     <option value="closed_book">Closed book &ndash; materials shown before the attempt only</option>
                 </select>
-                <span class="field-hint">
-                    Open book lets students keep the uploaded materials open beside the questions.
-                </span>
             </div>
 
-            <div class="field">
+            <div class="field" data-mode-only="quiz">
                 <label class="field-label" for="time-limit">Attempt time limit in minutes</label>
                 <input type="number" id="time-limit" name="time_limit_minutes" class="input input--narrow"
                     min="1" max="600" placeholder="No limit">
-                <span class="field-hint">
-                    Leave blank for no limit. An answer submitted after the limit is still graded,
-                    but is flagged as late.
-                </span>
+                <span class="field-hint">Leave blank for no limit. Work sent after the limit is still graded, but flagged late.</span>
+            </div>
+
+            <hr class="divider">
+            <span class="eyebrow">Submission window</span>
+            <p class="text-muted text-small">
+                Two separate ends. The due date only flags work as late &mdash; it still arrives.
+                The close date is the hard stop: nothing is accepted after it.
+            </p>
+
+            <div class="grid-2">
+                <div class="field">
+                    <label class="field-label" for="due-at">Due date &mdash; soft</label>
+                    <input type="datetime-local" id="due-at" name="due_at" class="input">
+                    <span class="field-hint">Late work is accepted and marked late.</span>
+                </div>
+                <div class="field">
+                    <label class="field-label" for="close-at">Close the link &mdash; hard</label>
+                    <input type="datetime-local" id="close-at" name="submissions_close_at" class="input">
+                    <span class="field-hint">Blank keeps the link open until you close it.</span>
+                </div>
             </div>
 
             <div class="form-actions">
@@ -51,4 +86,19 @@
         </form>
     </div>
 </div>
+
+<script>
+// An attempt clock only means something when the answers are typed into the
+// portal, so it is hidden for the file-based assignment format.
+(function () {
+    var radios = document.querySelectorAll('input[name="delivery_mode"]');
+    var timed = document.querySelector('[data-mode-only="quiz"]');
+    function sync() {
+        var chosen = document.querySelector('input[name="delivery_mode"]:checked');
+        if (timed) timed.hidden = !!(chosen && chosen.value === 'assignment');
+    }
+    Array.prototype.forEach.call(radios, function (r) { r.addEventListener('change', sync); });
+    sync();
+})();
+</script>
 {% endblock %}

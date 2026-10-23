@@ -6,6 +6,7 @@ questions on that topic. The pool is stored on the set and handed out per
 student by services.allocation.
 """
 import json
+import re
 import time
 from typing import Dict, List, Optional
 
@@ -23,6 +24,23 @@ DIFFICULTY_LEVELS = {
 }
 DEFAULT_DIFFICULTY = 3
 
+# The shape of question to write, picked by the teacher. An empty choice lets
+# the model use its own judgement.
+QUESTION_KINDS = {
+    'short_answer': ('Short answer',
+                     'Ask for a two or three sentence explanation in the student\'s own words.'),
+    'one_word': ('One word',
+                 'The expected answer is a single word or term.'),
+    'definition': ('Definition',
+                   'Ask the student to define one term precisely.'),
+    'compare': ('Compare and contrast',
+                'Ask the student to compare two related concepts and state the difference.'),
+    'numerical': ('Numerical',
+                  'Ask a small calculation and require the working as well as the final value.'),
+    'application': ('Applied scenario',
+                    'Describe a short scenario and ask the student to apply the concept to it.'),
+}
+
 # Guard rails so a typo in the form cannot ask the model for 500 questions.
 MIN_PER_STUDENT = 1
 MAX_PER_STUDENT = 5
@@ -37,6 +55,11 @@ def difficulty_profile(difficulty) -> tuple:
         level = DEFAULT_DIFFICULTY
     level = min(max(level, 1), 5)
     return DIFFICULTY_LEVELS[level]
+
+
+def kind_profile(kind) -> tuple:
+    """Look up a question shape: (label, instruction). Unknown kinds are ignored."""
+    return QUESTION_KINDS.get((kind or '').strip(), ('', ''))
 
 
 def _close_truncated_json(text: str) -> str:
@@ -130,13 +153,36 @@ def _extract_questions(response_text: str) -> List[Dict]:
     return questions
 
 
+def _api_error_message(exc: Exception) -> str:
+    """Turn an SDK failure into something the teacher can act on.
+
+    Quota exhaustion is the one the free tier hits constantly, and the SDK's own
+    message is a multi-paragraph dump naming protobuf fields and quota ids. That
+    is unreadable in a flash message and says nothing about what to do next, so
+    it is recognised here and replaced with the one useful fact: when the cap
+    resets.
+    """
+    raw = str(exc)
+    lowered = raw.lower()
+    if 'quota' in lowered or 'resource_exhausted' in lowered or '429' in lowered:
+        model = Config.GEMINI_MODEL.split('/')[-1]
+        reset = re.search(r'retry in ([\dhms.]+)', lowered)
+        when = f' The cap resets in {reset.group(1).split(".")[0]}.' if reset else ''
+        return (f'Gemini is out of quota for {model}.{when} The free tier allows '
+                f'20 requests per day per model. Wait for the reset, point '
+                f'GEMINI_MODEL in .env at a model with quota left, or add the '
+                f'questions by hand.')
+    return f'Question generation failed: {raw}'
+
+
 def generate_question_pool(topic: str, per_student: int, difficulty: int = DEFAULT_DIFFICULTY,
                            pool_size: Optional[int] = None, notes: str = '',
-                           context: str = '') -> Dict:
+                           context: str = '', kind: str = '') -> Dict:
     """Ask Gemini for a pool of questions on `topic`.
 
     `per_student` is how many questions each student will ultimately answer; the
     pool is deliberately larger so allocations can differ between students.
+    `kind` is the shape of question the teacher asked for (see QUESTION_KINDS).
     Returns {'questions': [...], 'error': None} or {'questions': [], 'error': str}.
     """
     topic = (topic or '').strip()
@@ -163,6 +209,7 @@ def generate_question_pool(topic: str, per_student: int, difficulty: int = DEFAU
     pool_size = min(max(pool_size, per_student), MAX_POOL)
 
     label, instruction = difficulty_profile(difficulty)
+    kind_label, kind_instruction = kind_profile(kind)
 
     prompt = f"""You are writing a question pool for an exam on: {topic}
 
@@ -171,6 +218,11 @@ Write {pool_size} distinct questions on this topic. Each student will be given
 difficulty and must NOT be variants of the same sentence.
 
 Difficulty: {label}. {instruction}
+"""
+    if kind_instruction:
+        prompt += f"""
+Question style: {kind_label}. {kind_instruction}
+Every question must be written in this style.
 """
     if notes:
         prompt += f"""
@@ -198,7 +250,7 @@ Do not add commentary before or after the JSON.
 
     try:
         genai.configure(api_key=Config.GEMINI_API_KEY)
-        model = genai.GenerativeModel('models/gemini-2.5-flash')
+        model = genai.GenerativeModel(Config.GEMINI_MODEL)
         response = model.generate_content(
             prompt,
             generation_config=genai.types.GenerationConfig(
@@ -210,7 +262,7 @@ Do not add commentary before or after the JSON.
         )
         questions = _extract_questions(response.text or '')
     except Exception as exc:  # network, quota, malformed JSON - all reported the same way
-        return {'questions': [], 'error': f'Question generation failed: {exc}'}
+        return {'questions': [], 'error': _api_error_message(exc)}
 
     if not questions:
         return {'questions': [], 'error': 'The model returned no usable questions. Try again.'}

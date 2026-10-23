@@ -7,7 +7,7 @@
 
 <div class="page-head">
     <div class="page-head__text">
-        <span class="eyebrow">Question set</span>
+        <span class="eyebrow">{{ 'Assignment' if is_assignment else 'Quiz' }}</span>
         <h1 class="page-title">{{ set.title }}</h1>
         <p class="page-subtitle">{{ set.description or 'No description' }}</p>
     </div>
@@ -17,12 +17,41 @@
         {% if pool_based %}
             <span class="badge badge--plain">Random questions</span>
         {% endif %}
-        <span class="meta meta--plain nowrap">{{ (time_limit_minutes ~ ' min limit') if time_limit_minutes else 'No time limit' }}</span>
-        <span class="meta meta--plain nowrap">{{ questions|length }} questions</span>
+        {% if time_limit_minutes %}
+            <span class="meta meta--plain nowrap">{{ time_limit_minutes }} min limit</span>
+        {% endif %}
+        {% if awaiting_start and pool_based %}
+            <span class="meta meta--plain nowrap">{{ set.questions_per_student }} questions on start</span>
+        {% elif questions %}
+            <span class="meta meta--plain nowrap">{{ questions|length }} questions</span>
+        {% endif %}
     </div>
 </div>
 
-{% if awaiting_start %}
+{% if not window_open %}
+    <!-- The teacher closed the submission link: the set is over for everyone -->
+    <div class="card card--padded section">
+        <span class="eyebrow">Closed</span>
+        <h2 class="section-title">The submission link is closed</h2>
+        <p class="text-muted text-small">
+            This {{ 'assignment' if is_assignment else 'quiz' }} stopped accepting work
+            {% if submissions_close_at %}on {{ submissions_close_at.strftime('%d %b %Y at %H:%M') }}{% endif %}.
+            Contact your teacher if you think this is wrong.
+        </p>
+        {% if question_papers %}
+            <div class="item-list">
+                {% for paper in question_papers %}
+                    <div class="item">
+                        <a class="item-name" href="{{ url_for('student.view_material', set_id=set.id, material_id=paper.id) }}"
+                            target="_blank" rel="noopener">{{ paper.filename }}</a>
+                        <span class="item-meta">{{ paper.file_type }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+{% elif awaiting_start %}
     <!-- The attempt has not been started yet: materials are open, answers are not -->
     <div class="card card--padded section">
         <span class="eyebrow">Before you start</span>
@@ -37,20 +66,40 @@
                 The materials stay available beside the questions while you answer.
             {% endif %}
             {% if time_limit_minutes %}You will have {{ time_limit_minutes }} minutes to finish.{% endif %}
+            {% if due_at %}This work is due {{ due_at.strftime('%d %b %Y at %H:%M') }}.{% endif %}
         </p>
 
-        {% if materials %}
-            <div class="item-list">
-                {% for material in materials %}
-                    <div class="item">
-                        <a class="item-name" href="{{ url_for('student.view_material', set_id=set.id, material_id=material.id) }}"
-                            target="_blank" rel="noopener">{{ material.filename }}</a>
-                        <span class="item-meta">{{ material.file_type }}</span>
-                    </div>
-                {% endfor %}
+        {% if question_papers %}
+            <div class="stack">
+                <span class="field-label">Question paper</span>
+                <div class="item-list">
+                    {% for paper in question_papers %}
+                        <div class="item">
+                            <a class="item-name" href="{{ url_for('student.view_material', set_id=set.id, material_id=paper.id) }}"
+                                target="_blank" rel="noopener">{{ paper.filename }}</a>
+                            <span class="item-meta">download</span>
+                        </div>
+                    {% endfor %}
+                </div>
+                <p class="text-muted text-small">Open the paper in a new tab and write your answers into your own document.</p>
             </div>
-            <p class="text-muted text-small">Files open in a new tab so you can keep them beside the questions.</p>
-        {% else %}
+        {% endif %}
+
+        {% if materials %}
+            <div class="stack">
+                <span class="field-label">Study materials</span>
+                <div class="item-list">
+                    {% for material in materials %}
+                        <div class="item">
+                            <a class="item-name" href="{{ url_for('student.view_material', set_id=set.id, material_id=material.id) }}"
+                                target="_blank" rel="noopener">{{ material.filename }}</a>
+                            <span class="item-meta">{{ material.file_type }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+                <p class="text-muted text-small">Files open in a new tab so you can keep them beside the questions.</p>
+            </div>
+        {% elif not question_papers %}
             <p class="text-muted text-small">No materials have been uploaded for this set.</p>
         {% endif %}
 
@@ -61,7 +110,51 @@
             </div>
         </form>
     </div>
+
 {% else %}
+
+    {% if is_overdue %}
+        <div class="alert alert--info">
+            The due date has passed. You can still submit while the link is open, but your work will be
+            recorded as late for your teacher.
+        </div>
+    {% endif %}
+
+    {% if pool_based and questions %}
+        <!-- Pool-based: the download is built from this student's own draw, so it
+             never exposes the rest of the pool the way the stored paper would -->
+        <div class="card section">
+            <div class="section-head">
+                <h2 class="section-title">Your question paper</h2>
+                <span class="meta meta--plain">Answer all questions</span>
+            </div>
+            <div class="item-list">
+                <div class="item">
+                    <a class="item-name" href="{{ url_for('student.download_paper', set_id=set.id) }}">Download paper (Word)</a>
+                    <span class="item-meta">{{ questions|length }} questions</span>
+                </div>
+            </div>
+            <p class="text-muted text-small">Only the questions drawn for you, in the order you were given them.</p>
+        </div>
+    {% endif %}
+
+    {% if question_papers %}
+        <div class="card section">
+            <div class="section-head">
+                <h2 class="section-title">Question paper</h2>
+                <span class="meta meta--plain">Answer all questions</span>
+            </div>
+            <div class="item-list">
+                {% for paper in question_papers %}
+                    <div class="item">
+                        <a class="item-name" href="{{ url_for('student.view_material', set_id=set.id, material_id=paper.id) }}"
+                            target="_blank" rel="noopener">{{ paper.filename }}</a>
+                        <span class="item-meta">{{ paper.file_type }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
 
     {% if show_materials and materials %}
         <div class="card section">
@@ -92,36 +185,89 @@
         </p>
     {% endif %}
 
-<form method="POST" action="{{ url_for('student.submit_answer', set_id=set.id) }}" class="section">
-    {% if pool_based %}
-        <p class="meta meta--plain section">
-            These {{ questions|length }} questions were drawn at random from the pool for this attempt and are
-            fixed now &mdash; reloading the page will not change your paper.
-        </p>
-    {% endif %}
-    <div class="stack stack--lg">
-        {% for question in questions %}
+    {% if is_assignment %}
+        <!-- Assignment mode: the questions are shown, the answers go in one document -->
+        <div class="stack stack--lg section">
+            {% if pool_based %}
+                <p class="meta meta--plain">
+                    These {{ questions|length }} questions were drawn at random from the pool for this attempt and are
+                    fixed now &mdash; reloading the page will not change your paper.
+                </p>
+            {% endif %}
+
             <div class="card">
-                <div class="row row--between row--top row--gap-lg">
-                    <h3 class="section-title">Question {{ loop.index }}</h3>
-                    <span class="meta meta--plain nowrap">Max: {{ question.max_score }} points</span>
+                <div class="section-head">
+                    <h2 class="section-title">Questions</h2>
+                    <span class="meta meta--plain nowrap">{{ questions|length }} to answer</span>
                 </div>
-                <div class="stack">
-                    <p class="question-text">{{ question.question_text }}</p>
+                <ol class="plain-list question-list">
+                    {% for question in questions %}
+                        <li>
+                            <span class="question-text">{{ question.question_text }}</span>
+                            <span class="meta meta--plain nowrap">{{ question.max_score }} points</span>
+                        </li>
+                    {% endfor %}
+                </ol>
+            </div>
+
+            <form method="POST" action="{{ url_for('student.submit_answersheet', set_id=set.id) }}"
+                enctype="multipart/form-data">
+                <div class="card card--padded">
+                    <span class="eyebrow">Hand in</span>
+                    <h2 class="section-title">Upload one answer sheet</h2>
+                    <p class="text-muted text-small">
+                        Write every answer into a single PDF or Word document, numbering them
+                        {% if not question_papers %}(question number before each answer){% endif %}.
+                        Your sheet is split by question and graded automatically.
+                    </p>
                     <div class="field">
-                        <label class="field-label" for="answer-{{ question.id }}">Your answer</label>
-                        <textarea id="answer-{{ question.id }}" name="answer_{{ question.id }}" class="textarea"
-                            rows="4" required placeholder="Type your answer here..."></textarea>
+                        <label class="field-label" for="answer-file">Answer sheet (PDF, DOCX or TXT)</label>
+                        <input type="file" id="answer-file" name="answer_file" class="file-input"
+                            accept=".pdf,.docx,.txt" required>
+                        <span class="field-hint">One file, up to 16&nbsp;MB. Scanned images are not readable.</span>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn--primary btn--lg btn--block">Submit answer sheet</button>
+                        <p class="text-muted text-small">
+                            This will use 1 of your {{ remaining_attempts }} remaining attempts.
+                        </p>
                     </div>
                 </div>
-            </div>
-        {% endfor %}
-    </div>
+            </form>
+        </div>
 
-    <div class="form-actions">
-        <button type="submit" class="btn btn--primary btn--lg btn--block">Submit answers</button>
-        <p class="text-muted text-small">This will use 1 of your {{ remaining_attempts }} remaining attempts.</p>
-    </div>
-</form>
+    {% else %}
+        <form method="POST" action="{{ url_for('student.submit_answer', set_id=set.id) }}" class="section">
+            {% if pool_based %}
+                <p class="meta meta--plain section">
+                    These {{ questions|length }} questions were drawn at random from the pool for this attempt and are
+                    fixed now &mdash; reloading the page will not change your paper.
+                </p>
+            {% endif %}
+            <div class="stack stack--lg">
+                {% for question in questions %}
+                    <div class="card">
+                        <div class="row row--between row--top row--gap-lg">
+                            <h3 class="section-title">Question {{ loop.index }}</h3>
+                            <span class="meta meta--plain nowrap">Max: {{ question.max_score }} points</span>
+                        </div>
+                        <div class="stack">
+                            <p class="question-text">{{ question.question_text }}</p>
+                            <div class="field">
+                                <label class="field-label" for="answer-{{ question.id }}">Your answer</label>
+                                <textarea id="answer-{{ question.id }}" name="answer_{{ question.id }}" class="textarea"
+                                    rows="4" required placeholder="Type your answer here..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn--primary btn--lg btn--block">Submit answers</button>
+                <p class="text-muted text-small">This will use 1 of your {{ remaining_attempts }} remaining attempts.</p>
+            </div>
+        </form>
+    {% endif %}
 {% endif %}
 {% endblock %}

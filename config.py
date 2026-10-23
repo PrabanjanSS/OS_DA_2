@@ -7,6 +7,9 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+    # Model for both grading and question generation. The free tier meters each
+    # model separately, so switching this is the way out of a per-model cap.
+    GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'models/gemini-2.5-flash')
 
     # Shared access code required to register a teacher account.
     # Leave empty to disable teacher self-registration entirely.

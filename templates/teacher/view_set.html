@@ -2,264 +2,566 @@
 
 {% block title %}{{ set.title }}{% endblock %}
 
+{% set is_assignment = set.delivery_mode == 'assignment' %}
+{% set book_label = 'Open book' if (set.book_mode or 'open_book') == 'open_book' else 'Closed book' %}
+
 {% block content %}
 <a href="{{ url_for('teacher.dashboard') }}" class="breadcrumb">Back to dashboard</a>
 
 <div class="page-head">
     <div class="page-head__text">
-        <span class="eyebrow">Question set</span>
+        <span class="eyebrow">{{ 'Assignment' if is_assignment else 'Timed quiz' }}</span>
         <h1 class="page-title">{{ set.title }}</h1>
         <p class="page-subtitle">{{ set.description or 'No description' }}</p>
     </div>
-    <div class="page-head__action row row--tight">
-        <span class="badge badge--plain">{{ 'Open book' if (set.book_mode or 'open_book') == 'open_book' else 'Closed book' }}</span>
-        <span class="meta meta--plain nowrap">{{ (set.time_limit_minutes ~ ' min limit') if set.time_limit_minutes else 'No time limit' }}</span>
-        <form method="POST" action="{{ url_for('teacher.delete_set', set_id=set.id) }}"
-            data-confirm="Delete this set permanently? Its questions, materials and student submissions will be removed.">
-            <button type="submit" class="btn btn--danger nowrap">Delete set</button>
-        </form>
+    <div class="page-head__action row row--wrap row--tight">
+        <span class="badge badge--plain">{{ book_label }}</span>
+        {% if set.time_limit_minutes %}
+            <span class="badge badge--plain">{{ set.time_limit_minutes }} min</span>
+        {% endif %}
+        {% if set.due_at %}
+            <span class="badge badge--plain">Due {{ set.due_at.strftime('%d %b, %H:%M') }}</span>
+        {% endif %}
+        {% if set.submissions_close_at %}
+            <span class="badge badge--plain">Closes {{ set.submissions_close_at.strftime('%d %b, %H:%M') }}</span>
+        {% else %}
+            <span class="badge badge--plain">Link stays open</span>
+        {% endif %}
     </div>
 </div>
 
-<div class="grid-2 section">
-    <!-- Upload Materials -->
-    <div class="card">
-        <h2 class="section-title">Upload materials</h2>
-        <form method="POST" action="{{ url_for('teacher.upload_material', set_id=set.id) }}" enctype="multipart/form-data">
-            <div class="field">
-                <label class="field-label" for="material-file">Material file</label>
-                <input type="file" id="material-file" name="file" accept=".pdf,.docx,.txt" required class="file-input">
-                <span class="field-hint">Accepted formats: PDF, DOCX, TXT.</span>
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn btn--primary btn--block">Upload material</button>
-            </div>
-        </form>
+<div class="tabs" role="tablist">
+    <button type="button" class="tab" role="tab" data-tab="setup"
+        aria-selected="{{ 'true' if active_tab == 'setup' else 'false' }}">Setup</button>
+    <button type="button" class="tab" role="tab" data-tab="questions"
+        aria-selected="{{ 'true' if active_tab == 'questions' else 'false' }}">
+        Questions <span class="tab-count">{{ questions|length }}</span>
+    </button>
+    <button type="button" class="tab" role="tab" data-tab="students"
+        aria-selected="{{ 'true' if active_tab == 'students' else 'false' }}">
+        Students <span class="tab-count">{{ access_grants|length }}</span>
+    </button>
+    <button type="button" class="tab" role="tab" data-tab="results"
+        aria-selected="{{ 'true' if active_tab == 'results' else 'false' }}">
+        Results <span class="tab-count">{{ submissions|length }}</span>
+        {% if unreviewed %}<span class="tab-dot" title="{{ unreviewed }} awaiting review"></span>{% endif %}
+    </button>
+</div>
 
-        {% if materials %}
-            <div class="item-list">
-                {% for material in materials %}
-                    <div class="item">
-                        <span class="item-name">{{ material.filename }}</span>
-                        <span class="item-meta">{{ material.file_type }}</span>
+<!-- ================= SETUP ================= -->
+<section class="tab-panel" data-panel="setup" {% if active_tab != 'setup' %}hidden{% endif %}>
+    <div class="grid-2">
+        <!-- Format & window -->
+        <div class="card">
+            <h2 class="section-title">Format &amp; window</h2>
+            <form method="POST" action="{{ url_for('teacher.update_set', set_id=set.id) }}">
+                <div class="field">
+                    <span class="field-label">Format</span>
+                    <div class="choice-grid">
+                        <label class="choice">
+                            <input type="radio" name="delivery_mode" value="quiz"
+                                {% if not is_assignment %}checked{% endif %}>
+                            <span>
+                                <span class="choice-title">Timed quiz</span>
+                                <span class="choice-text">Answers typed on screen, one box per question.</span>
+                            </span>
+                        </label>
+                        <label class="choice">
+                            <input type="radio" name="delivery_mode" value="assignment"
+                                {% if is_assignment %}checked{% endif %}>
+                            <span>
+                                <span class="choice-title">Assignment</span>
+                                <span class="choice-text">A Word or PDF answer sheet is uploaded and graded per question.</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label class="field-label" for="book-mode">Material access</label>
+                    <select id="book-mode" name="book_mode" class="select">
+                        <option value="open_book" {% if (set.book_mode or 'open_book') == 'open_book' %}selected{% endif %}>
+                            Open book &ndash; materials visible while answering
+                        </option>
+                        <option value="closed_book" {% if set.book_mode == 'closed_book' %}selected{% endif %}>
+                            Closed book &ndash; materials shown before the attempt only
+                        </option>
+                    </select>
+                </div>
+
+                <div class="field" data-mode-only="quiz">
+                    <label class="field-label" for="time-limit">Attempt time limit in minutes</label>
+                    <input type="number" id="time-limit" name="time_limit_minutes" class="input input--narrow"
+                        min="1" max="600" value="{{ set.time_limit_minutes or '' }}" placeholder="No limit">
+                    <span class="field-hint">Blank means no limit. Work sent after the limit is graded, but flagged late.</span>
+                </div>
+
+                <div class="grid-2">
+                    <div class="field">
+                        <label class="field-label" for="due-at">Due date &mdash; soft</label>
+                        <input type="datetime-local" id="due-at" name="due_at" class="input"
+                            value="{{ due_at_value }}">
+                        <span class="field-hint">Still accepted after this; recorded as late.</span>
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="close-at">Close the link &mdash; hard</label>
+                        <input type="datetime-local" id="close-at" name="submissions_close_at" class="input"
+                            value="{{ close_at_value }}">
+                        <span class="field-hint">Blank keeps the link open until you close it.</span>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn--primary">Save setup</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Files -->
+        <div class="card">
+            <h2 class="section-title">Files</h2>
+            <p class="text-muted text-small">
+                A <strong>question paper</strong> is handed to students &mdash; one is written from your
+                questions automatically. <strong>Study material</strong> is reference they may consult
+                in an open-book set.
+            </p>
+            <form method="POST" action="{{ url_for('teacher.upload_material', set_id=set.id) }}"
+                enctype="multipart/form-data">
+                <div class="field">
+                    <label class="field-label" for="material-file">File</label>
+                    <input type="file" id="material-file" name="file" accept=".pdf,.docx,.txt" required class="file-input">
+                </div>
+                <div class="field">
+                    <label class="field-label" for="material-kind">This file is</label>
+                    <select id="material-kind" name="kind" class="select">
+                        <option value="material">Study material</option>
+                        <option value="question_paper">Question paper</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn--primary">Upload</button>
+                </div>
+            </form>
+
+            {% if question_papers %}
+                <div class="item-list">
+                    <p class="field-label">Question papers</p>
+                    {% for material in question_papers %}
+                        <div class="item">
+                            <a class="item-name" href="{{ url_for('teacher.download_material', set_id=set.id, material_id=material.id) }}">{{ material.filename }}</a>
+                            <span class="row row--tight">
+                                {% if material.is_generated %}
+                                    <span class="badge badge--plain nowrap">Auto</span>
+                                {% else %}
+                                    <span class="item-meta item-meta--plain">{{ material.file_type }}</span>
+                                    <form method="POST" action="{{ url_for('teacher.delete_material', set_id=set.id, material_id=material.id) }}"
+                                        data-confirm="Remove this file?">
+                                        <button type="submit" class="btn btn--sm btn--danger">Remove</button>
+                                    </form>
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if study_materials %}
+                <div class="item-list">
+                    <p class="field-label">Study material</p>
+                    {% for material in study_materials %}
+                        <div class="item">
+                            <a class="item-name" href="{{ url_for('teacher.download_material', set_id=set.id, material_id=material.id) }}">{{ material.filename }}</a>
+                            <span class="row row--tight">
+                                <span class="item-meta item-meta--plain">{{ material.file_type }}</span>
+                                <form method="POST" action="{{ url_for('teacher.delete_material', set_id=set.id, material_id=material.id) }}"
+                                    data-confirm="Remove this file?">
+                                    <button type="submit" class="btn btn--sm btn--danger">Remove</button>
+                                </form>
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Danger zone -->
+    <div class="card card--danger section">
+        <div class="row row--between row--wrap">
+            <div>
+                <h2 class="section-title">Delete this set</h2>
+                <p class="text-muted text-small">
+                    Removes the set, its questions, files and every student submission. This cannot be undone.
+                </p>
+            </div>
+            <form method="POST" action="{{ url_for('teacher.delete_set', set_id=set.id) }}"
+                data-confirm="Delete this set permanently? Its questions, materials and student submissions will be removed.">
+                <button type="submit" class="btn btn--danger nowrap">Delete set</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- ================= QUESTIONS ================= -->
+<section class="tab-panel" data-panel="questions" {% if active_tab != 'questions' %}hidden{% endif %}>
+    <div class="grid-2">
+        <!-- AI pool -->
+        <div class="card">
+            <div class="section-head">
+                <h2 class="section-title">Generate a pool</h2>
+                {% if set.is_pool_based %}
+                    <span class="badge badge--accent nowrap">Random allocation</span>
+                {% endif %}
+            </div>
+
+            {% if set.is_pool_based %}
+                <p class="text-muted text-small">
+                    Topic: <strong>{{ set.pool_topic }}</strong> &middot;
+                    {{ set.questions_per_student }} per student &middot;
+                    {{ kind_label or 'any style' }} &middot;
+                    {{ difficulty_labels.get(set.pool_difficulty or 3, 'Moderate') }}.
+                    Each student draws a different, randomly ordered set when they start.
+                </p>
+            {% else %}
+                <p class="text-muted text-small">
+                    Give a topic and the AI writes a pool of questions. Students then each receive a
+                    random, differently ordered draw, so no two papers look alike at the same time.
+                </p>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('teacher.generate_questions', set_id=set.id) }}">
+                <div class="field">
+                    <label class="field-label" for="pool-topic">Topic</label>
+                    <input type="text" id="pool-topic" name="topic" class="input" required
+                        placeholder="CPU scheduling algorithms" value="{{ set.pool_topic or '' }}">
+                </div>
+                <div class="grid-2">
+                    <div class="field">
+                        <label class="field-label" for="pool-kind">Question style</label>
+                        <select id="pool-kind" name="pool_kind" class="select">
+                            <option value="">Model's choice</option>
+                            {% for key, data in question_kinds.items() %}
+                                <option value="{{ key }}" {% if set.pool_kind == key %}selected{% endif %}>{{ data[0] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="difficulty">Hardness</label>
+                        <select id="difficulty" name="difficulty" class="select">
+                            {% for level, level_label in difficulty_labels.items() %}
+                                <option value="{{ level }}" {% if level == (set.pool_difficulty or 3) %}selected{% endif %}>
+                                    {{ level }} &ndash; {{ level_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="questions-per-student">Per student</label>
+                        <input type="number" id="questions-per-student" name="questions_per_student"
+                            class="input input--narrow" value="{{ set.questions_per_student or 3 }}" min="1" max="5">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="pool-size">Pool size</label>
+                        <input type="number" id="pool-size" name="pool_size" class="input input--narrow"
+                            value="{{ (set.questions_per_student or 3) * 3 }}" min="1" max="30">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label" for="pool-notes">Notes for the AI (optional)</label>
+                    <textarea id="pool-notes" name="pool_notes" class="textarea" rows="2"
+                        placeholder="Focus on numerical problems, avoid definitions, cover round-robin and SJF...">{{ set.pool_notes or '' }}</textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn--primary">
+                        {{ 'Regenerate pool' if set.is_pool_based else 'Generate questions' }}
+                    </button>
+                </div>
+            </form>
+
+            {% if set.is_pool_based %}
+                <div class="row row--tight section">
+                    <form method="POST" action="{{ url_for('teacher.disable_pool', set_id=set.id) }}">
+                        <button type="submit" class="btn btn--sm">Switch off allocation</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('teacher.clear_pool', set_id=set.id) }}"
+                        data-confirm="Delete all generated questions and their allocations? Submitted answers keep the questions they already used.">
+                        <button type="submit" class="btn btn--sm btn--danger">Clear pool</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Manual question -->
+        <div class="card">
+            <h2 class="section-title">Write a question</h2>
+            <form method="POST" action="{{ url_for('teacher.add_question', set_id=set.id) }}">
+                <div class="field">
+                    <label class="field-label" for="question-text">Question text</label>
+                    <textarea id="question-text" name="question_text" class="textarea" rows="3" required
+                        placeholder="Enter your question here..."></textarea>
+                </div>
+                <div class="field">
+                    <label class="field-label" for="ideal-answer">Reference answer (optional)</label>
+                    <textarea id="ideal-answer" name="ideal_answer" class="textarea" rows="2"
+                        placeholder="What a full-mark answer covers..."></textarea>
+                </div>
+                <div class="grid-2">
+                    <div class="field">
+                        <label class="field-label" for="max-score">Max score</label>
+                        <input type="number" id="max-score" name="max_score" class="input input--narrow"
+                            value="10" min="1" max="100">
+                    </div>
+                    <div class="field">
+                        <label class="field-label" for="strictness">Grading strictness</label>
+                        <select id="strictness" name="strictness" class="select">
+                            {% for level, level_label in strictness_labels.items() %}
+                                <option value="{{ level }}" {% if level == 3 %}selected{% endif %}>
+                                    {{ level }} &ndash; {{ level_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn--primary">Add question</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Question list -->
+    <div class="card section">
+        <div class="section-head">
+            <div>
+                <h2 class="section-title">Questions ({{ questions|length }})</h2>
+                <p class="text-muted text-small">
+                    A Word paper is written from this list and filed under Setup &rarr; Files automatically.
+                </p>
+            </div>
+            {% if questions %}
+                <a href="{{ url_for('teacher.export_questions', set_id=set.id) }}" class="btn btn--outline btn--sm nowrap">
+                    Download paper
+                </a>
+            {% endif %}
+        </div>
+
+        {% if questions %}
+            <div class="stack">
+                {% for question in questions %}
+                    <div class="panel">
+                        <p class="question-text">{{ question.question_text }}</p>
+                        <div class="question-meta">
+                            <span>Max {{ question.max_score }}</span>
+                            <span>{{ strictness_labels.get(question.strictness or 3, 'Moderate') }}</span>
+                            {% if question.is_generated %}
+                                <span>AI generated{% if question.difficulty %} &middot; {{ difficulty_labels.get(question.difficulty, '') }}{% endif %}</span>
+                            {% endif %}
+                            {% if question.ideal_answer %}<span>Reference answer</span>{% endif %}
+                        </div>
                     </div>
                 {% endfor %}
             </div>
+        {% else %}
+            <p class="text-muted text-small">No questions yet. Generate a pool or write one above.</p>
         {% endif %}
     </div>
+</section>
 
-    <!-- Grant Access -->
+<!-- ================= STUDENTS ================= -->
+<section class="tab-panel" data-panel="students" {% if active_tab != 'students' %}hidden{% endif %}>
     <div class="card">
-        <h2 class="section-title">Grant student access</h2>
+        <div class="section-head">
+            <h2 class="section-title">Grant access</h2>
+            <span class="badge badge--plain nowrap">{{ access_grants|length }} granted</span>
+        </div>
         <form method="POST" action="{{ url_for('teacher.grant_access', set_id=set.id) }}">
-            <div class="field">
-                <label class="field-label" for="class-group">Grant to a class</label>
-                <select id="class-group" name="class_group_id" class="select">
-                    <option value="">&mdash; Single student (use the email below) &mdash;</option>
-                    {% for group in classes %}
-                        <option value="{{ group.id }}">{{ group.name }} ({{ group.members|length }} students)</option>
-                    {% endfor %}
-                </select>
-                <span class="field-hint">Granting a class gives every one of its students access in one step.</span>
-            </div>
-            <div class="field">
-                <label class="field-label" for="student-email">Or a single student email</label>
-                <input type="text" id="student-email" name="student_email" class="input" inputmode="email"
-                    placeholder="student@email.com">
-            </div>
-            <div class="field">
-                <label class="field-label" for="max-attempts">Max attempts</label>
-                <input type="number" id="max-attempts" name="max_attempts" class="input input--narrow"
-                    value="1" min="1" max="10">
+            <div class="grid-2">
+                <div class="field">
+                    <label class="field-label" for="class-group">A whole class</label>
+                    <select id="class-group" name="class_group_id" class="select">
+                        <option value="">&mdash; none, use a single email &mdash;</option>
+                        {% for group in classes %}
+                            <option value="{{ group.id }}">{{ group.name }} ({{ group.members|length }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="field-label" for="student-email">Or a single student email</label>
+                    <input type="text" id="student-email" name="student_email" class="input" inputmode="email"
+                        placeholder="student@email.com">
+                </div>
+                <div class="field">
+                    <label class="field-label" for="max-attempts">Max attempts each</label>
+                    <input type="number" id="max-attempts" name="max_attempts" class="input input--narrow"
+                        value="1" min="1" max="10">
+                </div>
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn btn--primary btn--block">Grant access</button>
+                <button type="submit" class="btn btn--primary">Grant access</button>
             </div>
         </form>
 
         {% if not classes %}
-            <p class="text-muted text-small">No classes yet. <a href="{{ url_for('teacher.classes') }}">Create one</a> to grant a whole slot at once.</p>
+            <p class="text-muted text-small section">
+                No classes yet. <a href="{{ url_for('teacher.classes') }}">Create one</a> to grant a whole slot at once.
+            </p>
         {% endif %}
+    </div>
 
+    <div class="card section">
+        <h2 class="section-title">Granted ({{ access_grants|length }})</h2>
         {% if access_grants %}
-            <div class="item-list">
+            <div class="item-list item-list--flush">
                 {% for grant in access_grants %}
                     <div class="item">
                         <span class="item-name">{{ grant.student.name }}</span>
-                        <span class="item-meta item-meta--plain">{{ grant.attempts_used }}/{{ grant.max_attempts }} attempts</span>
+                        <span class="item-meta item-meta--plain">
+                            {{ grant.student.email }} &middot; {{ grant.attempts_used }}/{{ grant.max_attempts }} attempts
+                        </span>
                     </div>
                 {% endfor %}
             </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Download marks for this assignment -->
-<div class="card section">
-    <div class="section-head">
-        <h2 class="section-title">Download marks for this assignment</h2>
-        <span class="badge badge--plain nowrap">Detailed sheet</span>
-    </div>
-    <p class="text-muted text-small">
-        One row per answer: student details, their response, the AI's key point and full reasoning,
-        score and which validation source graded it. Pick the class whose marks you want.
-    </p>
-    <form method="GET" action="{{ url_for('teacher.export_detailed', set_id=set.id) }}" class="form-inline">
-        <div class="field field--grow">
-            <label class="field-label" for="export-class">Class</label>
-            <select id="export-class" name="class_group_id" class="select" required>
-                <option value="all">All classes</option>
-                {% for group in classes %}
-                    <option value="{{ group.id }}">{{ group.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <button type="submit" class="btn btn--outline">Download Excel</button>
-    </form>
-</div>
-
-<!-- AI question pool -->
-<div class="card section">
-    <div class="section-head">
-        <h2 class="section-title">AI question pool</h2>
-        {% if set.is_pool_based %}
-            <span class="badge badge--accent nowrap">Random allocation on</span>
         {% else %}
-            <span class="badge badge--plain nowrap">Off</span>
+            <p class="text-muted text-small">No one has access yet.</p>
         {% endif %}
     </div>
+</section>
 
-    {% if set.is_pool_based %}
-        <p class="text-muted text-small">
-            Topic: <strong>{{ set.pool_topic }}</strong> &middot;
-            {{ set.questions_per_student }} questions per student &middot;
-            Difficulty: {{ difficulty_labels.get(set.pool_difficulty or 3, 'Balanced') }}.
-            Each student is handed a different, randomly ordered draw from the pool when they start.
-        </p>
-    {% else %}
-        <p class="text-muted text-small">
-            Give a topic and the AI will write a small pool of questions. Students then each receive a
-            random, differently ordered draw from it, so no two papers look alike at the same time.
-        </p>
-    {% endif %}
-
-    <form method="POST" action="{{ url_for('teacher.generate_questions', set_id=set.id) }}">
-        <div class="field">
-            <label class="field-label" for="pool-topic">Topic</label>
-            <input type="text" id="pool-topic" name="topic" class="input" required
-                placeholder="CPU scheduling algorithms" value="{{ set.pool_topic or '' }}">
-        </div>
-        <div class="grid-3">
-            <div class="field">
-                <label class="field-label" for="questions-per-student">Questions per student</label>
-                <input type="number" id="questions-per-student" name="questions_per_student"
-                    class="input input--narrow" value="{{ set.questions_per_student or 3 }}" min="1" max="5">
+<!-- ================= RESULTS ================= -->
+<section class="tab-panel" data-panel="results" {% if active_tab != 'results' %}hidden{% endif %}>
+    <div class="card">
+        <div class="section-head">
+            <div>
+                <h2 class="section-title">Download detailed marks</h2>
+                <p class="text-muted text-small">
+                    One row per answer: response, AI key point and reasoning, score and validation source.
+                </p>
             </div>
-            <div class="field">
-                <label class="field-label" for="difficulty">Hardness</label>
-                <select id="difficulty" name="difficulty" class="select">
-                    {% for level, level_label in difficulty_labels.items() %}
-                        <option value="{{ level }}" {% if level == (set.pool_difficulty or 3) %}selected{% endif %}>
-                            {{ level }} &ndash; {{ level_label }}
-                        </option>
+            <a href="{{ url_for('teacher.set_analytics', set_id=set.id) }}" class="btn btn--outline btn--sm nowrap">Open analytics</a>
+        </div>
+        <form method="GET" action="{{ url_for('teacher.export_detailed', set_id=set.id) }}" class="form-inline">
+            <div class="field field--grow">
+                <label class="field-label" for="export-class">Class</label>
+                <select id="export-class" name="class_group_id" class="select" required>
+                    <option value="all">All classes</option>
+                    {% for group in classes %}
+                        <option value="{{ group.id }}">{{ group.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="field">
-                <label class="field-label" for="pool-size">Pool size</label>
-                <input type="number" id="pool-size" name="pool_size" class="input input--narrow"
-                    value="{{ (set.questions_per_student or 3) * 3 }}" min="1" max="30">
-                <span class="field-hint">A larger pool means fewer repeated questions.</span>
-            </div>
-        </div>
-        <div class="field">
-            <label class="field-label" for="pool-notes">Notes for the AI (optional)</label>
-            <textarea id="pool-notes" name="pool_notes" class="textarea" rows="2"
-                placeholder="Focus on numerical problems, avoid definitions, cover round-robin and SJF...">{{ set.pool_notes or '' }}</textarea>
-        </div>
-        <div class="form-actions">
-            <button type="submit" class="btn btn--primary">
-                {{ 'Regenerate pool' if set.is_pool_based else 'Generate questions' }}
-            </button>
-        </div>
-    </form>
-
-    {% if set.is_pool_based %}
-        <div class="row row--tight">
-            <form method="POST" action="{{ url_for('teacher.disable_pool', set_id=set.id) }}">
-                <button type="submit" class="btn btn--sm">Switch off random allocation</button>
-            </form>
-            <form method="POST" action="{{ url_for('teacher.clear_pool', set_id=set.id) }}"
-                data-confirm="Delete all generated questions and their allocations? Submitted answers keep the questions they already used.">
-                <button type="submit" class="btn btn--sm btn--danger">Clear pool</button>
-            </form>
-        </div>
-    {% endif %}
-</div>
-
-<!-- Add Question -->
-<div class="card section">
-    <h2 class="section-title">Add question</h2>
-    <form method="POST" action="{{ url_for('teacher.add_question', set_id=set.id) }}">
-        <div class="field">
-            <label class="field-label" for="question-text">Question text</label>
-            <textarea id="question-text" name="question_text" class="textarea" rows="3" required
-                placeholder="Enter your question here..."></textarea>
-        </div>
-        <div class="field">
-            <label class="field-label" for="ideal-answer">Ideal answer (optional)</label>
-            <textarea id="ideal-answer" name="ideal_answer" class="textarea" rows="2"
-                placeholder="Reference answer for validation..."></textarea>
-        </div>
-        <div class="field">
-            <label class="field-label" for="max-score">Max score</label>
-            <input type="number" id="max-score" name="max_score" class="input input--narrow"
-                value="10" min="1" max="100">
-        </div>
-        <div class="field">
-            <label class="field-label" for="strictness">Grading strictness</label>
-            <select id="strictness" name="strictness" class="select">
-                {% for level, level_label in strictness_labels.items() %}
-                    <option value="{{ level }}" {% if level == 3 %}selected{% endif %}>
-                        {{ level }} &ndash; {{ level_label }}
-                    </option>
-                {% endfor %}
-            </select>
-            <span class="field-hint">How harshly the AI should grade answers to this question.</span>
-        </div>
-        <div class="form-actions">
-            <button type="submit" class="btn btn--primary">Add question</button>
-        </div>
-    </form>
-</div>
-
-<!-- Questions List -->
-<div class="card section">
-    <div class="section-head">
-        <h2 class="section-title">Questions ({{ questions|length }})</h2>
-        <a href="{{ url_for('teacher.set_analytics', set_id=set.id) }}" class="text-small">View analytics</a>
+            <button type="submit" class="btn btn--outline">Download Excel</button>
+        </form>
     </div>
 
-    {% if questions %}
-        <div class="stack">
-            {% for question in questions %}
-                <div class="panel">
-                    <p class="question-text">{{ question.question_text }}</p>
-                    <div class="question-meta">
-                        <span>Max score: {{ question.max_score }}</span>
-                        <span>Strictness: {{ strictness_labels.get(question.strictness or 3, 'Balanced') }}</span>
-                        {% if question.is_generated %}
-                            <span>AI generated{% if question.difficulty %} &middot; {{ difficulty_labels.get(question.difficulty, '') }}{% endif %}</span>
+    {% if is_assignment %}
+    <div class="card section">
+        <div class="section-head">
+            <h2 class="section-title">Uploaded answer sheets ({{ submissions|length }})</h2>
+            {% if unreviewed %}
+                <span class="badge badge--warn nowrap">{{ unreviewed }} awaiting review</span>
+            {% endif %}
+        </div>
+
+        {% if submissions %}
+            <div class="stack stack--xl">
+                {% for submission in submissions %}
+                    <div class="panel">
+                        <div class="row row--between row--top row--gap-lg">
+                            <div>
+                                <h3 class="section-title">{{ submission.student.name }}</h3>
+                                <p class="meta meta--plain">
+                                    {{ submission.filename }} &middot;
+                                    handed in {{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}
+                                </p>
+                            </div>
+                            <div class="row row--tight row--wrap">
+                                {% if submission.submitted_late %}<span class="badge">Late</span>{% endif %}
+                                {% if submission.reviewed %}
+                                    <span class="badge badge--accent">Reviewed</span>
+                                {% else %}
+                                    <span class="badge badge--warn">Needs review</span>
+                                {% endif %}
+                                <a href="{{ url_for('teacher.download_submission', submission_id=submission.id) }}"
+                                    class="btn btn--sm btn--outline">Download</a>
+                            </div>
+                        </div>
+
+                        {% if submission.split_note %}
+                            <p class="text-small text-muted section">{{ submission.split_note }}</p>
                         {% endif %}
-                        {% if question.ideal_answer %}
-                            <span>Reference answer provided</span>
+
+                        <div class="item-list item-list--flush">
+                            {% for log in submission.logs %}
+                                <div class="item">
+                                    <span class="item-name">
+                                        Q{{ loop.index }} &middot; {{ log.question.question_text|truncate(80) }}
+                                    </span>
+                                    <span class="item-meta item-meta--plain nowrap">
+                                        {{ "%.1f"|format(log.score) }}/{{ log.max_score }}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        {% if submission.teacher_note %}
+                            <div class="note note--teacher section">
+                                <span class="note-label">Review note</span>
+                                <p class="note-body">{{ submission.teacher_note }}</p>
+                            </div>
+                        {% endif %}
+
+                        {% if not submission.reviewed %}
+                            <form method="POST" action="{{ url_for('teacher.review_submission', submission_id=submission.id) }}"
+                                class="form-inline section">
+                                <div class="field field--grow">
+                                    <label class="field-label" for="note-{{ submission.id }}">Review note (optional)</label>
+                                    <input type="text" id="note-{{ submission.id }}" name="teacher_note" class="input"
+                                        placeholder="e.g. split looks correct">
+                                </div>
+                                <div class="field">
+                                    <button type="submit" class="btn btn--primary nowrap">Mark reviewed</button>
+                                </div>
+                            </form>
                         {% endif %}
                     </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p class="text-muted text-small">No questions added yet.</p>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted text-small">No answer sheets handed in yet.</p>
+        {% endif %}
+    </div>
     {% endif %}
-</div>
+</section>
+
+<script>
+// Tabs swap role="tab" buttons for panels of the same data-panel name. The
+// server renders the initial state so a redirect can land on any tab.
+(function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+    var panels = Array.prototype.slice.call(document.querySelectorAll('[data-panel]'));
+    function show(name) {
+        tabs.forEach(function (t) {
+            t.setAttribute('aria-selected', t.dataset.tab === name ? 'true' : 'false');
+        });
+        panels.forEach(function (p) {
+            p.hidden = p.dataset.panel !== name;
+        });
+    }
+    tabs.forEach(function (t) {
+        t.addEventListener('click', function () { show(t.dataset.tab); });
+    });
+})();
+
+// The attempt clock only applies to the typed-on-screen format.
+(function () {
+    var radios = document.querySelectorAll('input[name="delivery_mode"]');
+    var timed = document.querySelector('[data-mode-only="quiz"]');
+    function sync() {
+        var chosen = document.querySelector('input[name="delivery_mode"]:checked');
+        if (timed) timed.hidden = !!(chosen && chosen.value === 'assignment');
+    }
+    Array.prototype.forEach.call(radios, function (r) { r.addEventListener('change', sync); });
+    sync();
+})();
+</script>
 {% endblock %}

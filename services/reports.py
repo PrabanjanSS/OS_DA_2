@@ -1,6 +1,6 @@
-"""Spreadsheet builders for the two teacher downloads.
+"""Spreadsheet and document builders for the teacher's downloads.
 
-Two distinct reports, deliberately kept apart:
+Two distinct mark reports, deliberately kept apart:
 
 * `build_detailed_report` - one row per student answer for a single assignment,
   filtered to one class. Carries the response, the AI's verdict, its one-line
@@ -9,9 +9,15 @@ Two distinct reports, deliberately kept apart:
 
 * `build_marksheet` - one row per student, one column per assignment, across a
   whole class. No answers or reasoning; just the register.
+
+Plus `question_paper_bytes`, which writes the questions out as a Word document.
+For an assignment that document doubles as the answer sheet: each question is
+followed by blank space, so the student writes their answers in place and hands
+the same file back.
 """
 from io import BytesIO
 
+from docx import Document
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
@@ -85,7 +91,7 @@ def build_detailed_report(set_obj, class_group=None):
     ws.title = 'Detailed marks'
 
     headers = ['Student', 'Email', 'Class', 'Question', 'Student response', 'Key point',
-               'Score', 'Max', '%', 'AI validation', 'Source', 'Confidence',
+               'Score', 'Max', '%', 'AI validation', 'Source', 'Handed in', 'Confidence',
                'Late', 'Manually graded', 'Teacher comment', 'Submitted at']
 
     ws['A1'] = f'{set_obj.title} - detailed marks'
@@ -113,6 +119,7 @@ def build_detailed_report(set_obj, class_group=None):
             _pct(log.score, log.max_score),
             log.ai_response or '',
             (log.source_used or '').replace('_', ' '),
+            'Uploaded sheet' if log.submission_id else 'Typed',
             log.confidence,
             'Yes' if log.submitted_late else '',
             'Yes' if log.manually_graded else '',
@@ -124,9 +131,9 @@ def build_detailed_report(set_obj, class_group=None):
             cell.border = CELL_BORDER
             cell.alignment = Alignment(vertical='top', wrap_text=col in (4, 5, 6, 10))
         ws.cell(row=row, column=7).number_format = '0.##'
-        ws.cell(row=row, column=12).number_format = '0.00'
+        ws.cell(row=row, column=13).number_format = '0.00'
 
-    _autosize(ws, [18, 26, 10, 42, 46, 30, 7, 6, 7, 46, 14, 11, 7, 16, 24, 17])
+    _autosize(ws, [18, 26, 10, 42, 46, 30, 7, 6, 7, 46, 14, 13, 11, 7, 16, 24, 17])
     return wb
 
 
@@ -212,5 +219,53 @@ def build_marksheet(class_group, sets):
 def workbook_bytes(workbook) -> BytesIO:
     stream = BytesIO()
     workbook.save(stream)
+    stream.seek(0)
+    return stream
+
+
+def question_paper_bytes(set_obj, questions, kind_label='') -> BytesIO:
+    """Write the set's questions out as a Word document.
+
+    The layout matters twice over: a printed copy reads as a normal paper, and
+    the exported file is also the answer sheet an assignment-mode student fills
+    in - which is why each question is followed by writing space, and why the
+    questions are labelled "Question N" so the splitter can cut them apart again
+    when the document comes back.
+    """
+    doc = Document()
+
+    doc.add_heading(set_obj.title, level=0)
+    if set_obj.description:
+        doc.add_paragraph(set_obj.description)
+
+    details = []
+    if kind_label:
+        details.append(f'Question style: {kind_label}')
+    if (set_obj.book_mode or 'open_book') == 'closed_book':
+        details.append('Closed book')
+    else:
+        details.append('Open book')
+    if set_obj.time_limit_minutes:
+        details.append(f'Time limit: {set_obj.time_limit_minutes} minutes')
+    if set_obj.due_at:
+        details.append(f'Due: {set_obj.due_at.strftime("%d %b %Y, %H:%M")}')
+    if set_obj.submissions_close_at:
+        details.append(f'Submission link closes: {set_obj.submissions_close_at.strftime("%d %b %Y, %H:%M")}')
+
+    doc.add_paragraph('  |  '.join(details))
+    doc.add_paragraph(
+        'Write each answer in the space under its question, then upload this document '
+        'as your answer sheet.'
+    )
+
+    for index, question in enumerate(questions, start=1):
+        doc.add_heading(f'Question {index}', level=2)
+        doc.add_paragraph(question.question_text)
+        doc.add_paragraph(f'({question.max_score} points)')
+        for _ in range(6):
+            doc.add_paragraph()  # writing space
+
+    stream = BytesIO()
+    doc.save(stream)
     stream.seek(0)
     return stream

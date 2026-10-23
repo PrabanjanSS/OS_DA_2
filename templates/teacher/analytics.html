@@ -84,6 +84,9 @@
 
                         <div class="row row--wrap">
                             <span class="badge badge--plain">{{ log.source_used|replace('_', ' ') }}</span>
+                            {% if log.submission_id %}
+                                <span class="badge badge--plain">Uploaded sheet</span>
+                            {% endif %}
                             <span class="meta meta--plain">Confidence: {{ "%.2f"|format(log.confidence) }}</span>
                             {% if log.submitted_late %}
                                 <span class="badge badge--plain">Late submission</span>
@@ -100,6 +103,7 @@
                         <!-- Manual correction -->
                         <form method="POST" action="{{ url_for('teacher.manual_correct', log_id=log.id) }}" class="note note--correction">
                             <span class="note-label">Manual correction</span>
+                            <input type="hidden" name="next" value="analytics">
                             <div class="form-inline">
                                 <div class="field">
                                     <label class="field-label" for="score-{{ log.id }}">Corrected score (0 &ndash; {{ log.max_score }})</label>
