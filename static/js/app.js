@@ -49,3 +49,11 @@ document.addEventListener('submit', function (event) {
         }
     });
 })();
+
+// Interactive cards: navigate on click.
+document.addEventListener('click', function (event) {
+    var card = event.target.closest('.card--interactive');
+    if (card && card.dataset.href && !event.target.closest('a, button')) {
+        window.location.href = card.dataset.href;
+    }
+});

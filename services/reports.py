@@ -253,6 +253,26 @@ def question_paper_bytes(set_obj, questions, kind_label='') -> BytesIO:
         details.append(f'Submission link closes: {set_obj.submissions_close_at.strftime("%d %b %Y, %H:%M")}')
 
     doc.add_paragraph('  |  '.join(details))
+
+    # AI Grading Instructions
+    doc.add_heading('HOW TO WRITE YOUR ANSWERS', level=3)
+    doc.add_paragraph(
+        'To make sure the AI grades your work correctly on the first pass, follow '
+        'these three rules:'
+    )
+    doc.add_paragraph(
+        'Label every answer (e.g., "Q1", "Q2") before you write it.',
+        style='List Number'
+    )
+    doc.add_paragraph(
+        'Leave a blank line between different answers.',
+        style='List Number'
+    )
+    doc.add_paragraph(
+        'Do not combine several answers into a single paragraph.',
+        style='List Number'
+    )
+
     doc.add_paragraph(
         'Write each answer in the space under its question, then upload this document '
         'as your answer sheet.'

@@ -17,7 +17,8 @@
 {% if accessible_sets %}
     <div class="grid-3">
         {% for item in accessible_sets %}
-            <div class="card">
+            <div class="card card--interactive fade-in delay-{{ loop.index if loop.index <= 3 else 3 }}" 
+                data-href="{{ url_for('student.view_set', set_id=item.set.id) }}">
                 <div class="stack">
                     <div class="stack">
                         <div class="row row--tight">
